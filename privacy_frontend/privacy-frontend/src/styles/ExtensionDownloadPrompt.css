@@ -1,0 +1,184 @@
+/* ExtensionDownloadPrompt.css */
+
+/* Backdrop */
+.extension-prompt-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  opacity: 0;
+  animation: fadeIn 0.3s ease forwards;
+}
+
+/* Main popup - Centered */
+.extension-prompt {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.8);
+  width: 400px;
+  max-width: 90vw;
+  background: white;
+  border: 1px solid #e5e5e5;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  z-index: 1000;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.extension-prompt.visible {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+  animation: gentleBounce 2s ease-in-out infinite;
+}
+
+/* Gentle bouncing animation */
+@keyframes gentleBounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  40% {
+    transform: translate(-50%, -52%) scale(1.01);
+  }
+  60% {
+    transform: translate(-50%, -51%) scale(1.005);
+  }
+}
+
+/* Remove arrow since it's centered */
+.prompt-arrow {
+  display: none;
+}
+
+/* Content */
+.prompt-content {
+  padding: 30px;
+}
+
+.prompt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.prompt-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+}
+
+.prompt-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.prompt-close:hover {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.prompt-content p {
+  margin: 0 0 24px 0;
+  color: #666;
+  line-height: 1.6;
+  font-size: 16px;
+}
+
+.prompt-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-primary, .btn-secondary {
+  padding: 2px 20px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  flex: 1;
+  text-align: center;
+}
+
+.btn-primary {
+  background: #000000;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #202020;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: #666;
+  border: 1px solid #ddd;
+}
+
+.btn-secondary:hover {
+  background: #f8f9fa;
+  border-color: #bbb;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .extension-prompt-backdrop {
+    background: rgba(0, 0, 0, 0.7);
+  }
+  
+  .extension-prompt {
+    background: #2a2a2a;
+    border-color: #444;
+    color: white;
+  }
+  
+  .prompt-header h3 {
+    color: white;
+  }
+  
+  .prompt-content p {
+    color: #ccc;
+  }
+  
+  .prompt-close {
+    color: #999;
+  }
+  
+  .prompt-close:hover {
+    background: #444;
+    color: #ccc;
+  }
+  
+  .btn-secondary {
+    border-color: #555;
+    color: #ccc;
+  }
+  
+  .btn-secondary:hover {
+    background: #444;
+    border-color: #666;
+  }
+}

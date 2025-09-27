@@ -1,0 +1,516 @@
+/* ===========================
+   LandingPage.css
+   Modern reset + dark hero + white features
+   =========================== */
+
+/* Modern Reset and Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.landing {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  line-height: 1.6;
+  color: #ffffff;
+  background: #000000;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* ----------------
+   Header
+----------------- */
+.landing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 3rem;
+  background: #000000;
+  border-bottom: 1px solid #333333;
+  position: relative;
+  z-index: 100;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.logo-placeholder {
+  font-size: 1.5rem;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  border: 1px solid #333333;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.nav-btn {
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 6px 16px;
+  border-radius: 0px;
+  transition: all 0.2s ease;
+  border: 1px solid #ffffff;
+  min-width: 60px;
+  text-align: center;
+}
+
+.nav-btn:not(.primary) {
+  color: #cccccc;
+  background: transparent;
+  border: 1px solid #ffffff;
+}
+
+.nav-btn:not(.primary):hover {
+  background: #ffffff;
+  color: #000000;
+  transform: translateY(-1px);
+}
+
+.nav-btn.primary {
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #ffffff;
+  font-weight: 600;
+}
+
+.nav-btn.primary:hover {
+  background: #000000;
+  color: #ffffff;
+  border: 1px solid #ffffff;
+  transform: translateY(-1px);
+}
+
+/* ----------------
+   Hero Section
+----------------- */
+.hero {
+  padding: 8rem 3rem 6rem;
+  overflow: hidden;
+  position: relative;
+  z-index: 10;
+  background: #000000;
+}
+
+.hero-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 4rem;
+  align-items: center;
+  animation: fadeIn 0.8s ease-out;
+}
+
+.hero-text {
+  text-align: left;
+}
+
+.hero-title {
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.1;
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.03em;
+}
+
+.hero-subtitle {
+  font-size: 1.25rem;
+  color: #cccccc;
+  margin-bottom: 3rem;
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+.hero-dashboard {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  perspective: 1200px;
+}
+
+.laptop-container {
+  position: relative;
+  transform: rotateX(15deg) rotateY(-20deg);
+  transition: transform 0.4s ease;
+}
+
+.laptop-container:hover {
+  transform: rotateX(10deg) rotateY(-15deg) scale(1.02);
+}
+
+.laptop-mockup {
+  position: relative;
+}
+
+.laptop-screen {
+  background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
+  padding: 15px 15px 8px 15px;
+  border-radius: 12px 12px 0 0;
+  position: relative;
+  box-shadow:
+    0 0 0 2px #333333,
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.screen-bezel {
+  background: #000000;
+  border-radius: 8px;
+  padding: 3px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+}
+
+.screen-content {
+  width: 520px;
+  height: 340px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dashboard-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  border-radius: 6px;
+  display: block;
+  background: #ffffff;
+}
+
+.laptop-base {
+  position: relative;
+}
+
+.laptop-hinge {
+  background: linear-gradient(90deg, #333333, #2a2a2a, #333333);
+  height: 8px;
+  width: 100%;
+  border-radius: 0 0 4px 4px;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.laptop-bottom {
+  background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+  height: 20px;
+  width: 600px;
+  margin: 0 auto;
+  border-radius: 0 0 20px 20px;
+  position: relative;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.laptop-brand {
+  color: #666666;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* Subtle screen reflection */
+.screen-content::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 25%,
+    transparent 75%,
+    rgba(255, 255, 255, 0.05) 100%);
+  pointer-events: none;
+  border-radius: 6px;
+}
+
+/* CTA Buttons */
+.cta-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 4rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 16px 32px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  position: relative;
+  border: 2px solid transparent;
+}
+
+.btn.primary {
+  background: #ffffff;
+  color: #000000;
+  border: 2px solid #ffffff;
+}
+
+.btn.primary:hover {
+  background: #000000;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  transform: translateY(-2px);
+}
+
+.btn.secondary {
+  background: transparent;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+}
+
+.btn.secondary:hover {
+  background: #ffffff;
+  color: #000000;
+  transform: translateY(-2px);
+}
+
+/* ----------------
+   Features Section
+----------------- */
+.features {
+  padding: 6rem 3rem;
+  background: #ffffff;
+  position: relative;
+  z-index: 10;
+  color: #000000;
+}
+
+.features-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+}
+
+.feature-card {
+  background: #ffffff;
+  padding: 2.5rem 2rem;
+  border-radius: 8px;
+  text-align: center;
+  border: 2px solid #000000;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.feature-card:hover {
+  background: #000000;
+  color: #ffffff;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.feature-card:hover .feature-title {
+  color: #ffffff;
+}
+
+.feature-card:hover .feature-description {
+  color: #cccccc;
+}
+
+.feature-icon {
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.feature-icon img {
+  width: 40px;
+  height: 40px;
+  filter: brightness(0);
+}
+
+.feature-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 1rem;
+  letter-spacing: -0.01em;
+  transition: color 0.3s ease;
+}
+
+.feature-description {
+  color: #666666;
+  font-size: 1rem;
+  line-height: 1.6;
+  font-weight: 400;
+  transition: color 0.3s ease;
+}
+
+/* ----------------
+   Footer
+----------------- */
+.landing-footer {
+  background: #000000;
+  color: #cccccc;
+  padding: 2rem 3rem;
+  text-align: center;
+  font-size: 0.9rem;
+  position: relative;
+  z-index: 10;
+  border-top: 1px solid #333333;
+}
+
+/* ----------------
+   Responsive
+----------------- */
+@media (max-width: 768px) {
+  .landing-header { padding: 1rem 1.5rem; }
+  .logo { font-size: 1.3rem; }
+  .nav-links { gap: 1rem; }
+
+  .nav-btn.primary {
+    margin-left: 0.5rem;
+    padding: 6px 14px;
+    font-size: 0.8rem;
+  }
+
+  .hero { padding: 6rem 1.5rem 4rem; }
+
+  .hero-content {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+    text-align: center;
+  }
+
+  .hero-text { text-align: center; }
+  .hero-title { font-size: 2.5rem; }
+  .hero-subtitle { font-size: 1.1rem; }
+
+  /* Keep both selectors in case markup varies */
+  .dashboard-mockup,
+  .laptop-mockup { max-width: 400px; }
+
+  .cta-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .btn {
+    width: 100%;
+    max-width: 280px;
+    justify-content: center;
+  }
+
+  .features { padding: 4rem 1.5rem; }
+  .features-container { grid-template-columns: 1fr; gap: 1.5rem; }
+  .feature-card { padding: 2rem 1.5rem; }
+  .landing-footer { padding: 2rem 1.5rem; }
+}
+
+@media (max-width: 480px) {
+  .landing-header { padding: 1rem; }
+  .nav-links { gap: 0.5rem; }
+
+  .nav-btn { font-size: 0.8rem; padding: 5px 12px; }
+
+  .nav-btn.primary {
+    padding: 5px 12px;
+    margin-left: 0.25rem;
+  }
+
+  .hero { padding: 5rem 1rem 3rem; }
+  .hero-title { font-size: 2rem; }
+  .hero-subtitle { font-size: 1rem; }
+  .btn { padding: 14px 28px; font-size: 0.95rem; }
+  .features { padding: 3rem 1rem; }
+}
+
+/* ----------------
+   Animations
+----------------- */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ----------------
+   FINAL OVERRIDES: keep Login rectangular
+   (prevents global pill styles from other CSS)
+----------------- */
+.landing .nav-links .nav-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent !important;
+  color: #ccc !important;
+  border: 1px solid #fff !important;
+  border-radius: 8px  !important;
+  padding: 8px 20px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.landing .nav-links .nav-btn:hover {
+  background: #fff;
+  color: #000;
+}
+
+.landing .nav-links .nav-btn.primary {
+  background: #fff !important;
+  color: #000 !important;
+  border: 1px solid #fff !important;
+}
+
+.landing .nav-links .nav-btn.primary:hover {
+  background: #000;
+  color: #fff;
+  border-color: #fff;
+}
+
+/* If any UI kit adds before/after shapes on buttons, nuke them */
+.landing .nav-links .nav-btn::before,
+.landing .nav-links .nav-btn::after {
+  content: none !important;
+}

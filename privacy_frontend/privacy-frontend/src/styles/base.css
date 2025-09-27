@@ -1,0 +1,78 @@
+/* src/styles/base.css */
+
+/* App-wide base styles that read from CSS variables */
+html, body, #root {
+  min-height: 100%;
+}
+
+/* makes anchor jumps / scrollIntoView stop below the nav */
+html { 
+  scroll-padding-top: calc(var(--topbar-h) + var(--nav-gap)); 
+}
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif;
+}
+
+/* common tokens used in your components */
+:root {
+
+  --bg: #ffffff;
+  --panel: #ffffff;
+  --stroke: rgba(2, 6, 23, .08);
+  --text: #0f172a;
+  --text-soft: #475569;
+
+  /* Shared hover/look tokens */
+  --hover-scale: 1.02;
+  --hover-shadow: 0 8px 24px rgba(2, 6, 23, 0.12);
+  --panel-elevated: color-mix(in oklab, var(--panel), white 4%);
+
+  --topbar-h: 64px;   /* set to your nav’s actual height */
+  --nav-gap: 50px;    /* extra breathing room below the nav */
+
+
+  --icon-tile-size: 44px;   /* try 40 / 44 / 48 */
+  --icon-size: 24px;        /* try 20 / 22 / 24 / 26 */
+  --icon-tile-radius: 14px; 
+
+  /* icon tile tokens */
+  --icon-tile-size: 36px;          /* square size behind the icon */
+  --icon-tile-radius: 12px;        /* soft corners */
+  --icon-size: 20px;               /* the icon itself */
+  --icon-tile-bg: rgba(255,255,255,.65);
+  --icon-tile-border: rgba(2,6,23,.08);
+  
+}
+
+/* Dark theme tweak */
+.theme-dark {
+  --bg: #000000dd;
+  --hover-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  --panel-elevated: color-mix(in oklab, var(--panel), white 6%);
+
+  /* icon tile tokens */
+  --icon-tile-bg: rgba(255,255,255,.08);
+  --icon-tile-border: rgba(255,255,255,.10);
+}
+
+
+/* Panels, borders, text colors driven by variables */
+#app { background: var(--bg); color: var(--text); }
+.card.panel { background: var(--panel); border: 1px solid var(--stroke); box-shadow: var(--shadow); }
+.muted, .muted-text { color: var(--muted); }
+
+/* Inputs/buttons (optional) */
+input, button, .btn {
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+}
+
+/* Sidebar uses variables only (no hard-coded colors) */
+#sidebar { background: var(--sidebar-bg, var(--panel)); border-right: 1px solid var(--stroke); }
+#sidebar .label { color: var(--text); }

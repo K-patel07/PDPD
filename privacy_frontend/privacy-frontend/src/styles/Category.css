@@ -1,0 +1,1158 @@
+/* =========================================================
+   Category Page Layout - Responsive & No Horizontal Scroll
+   ========================================================= */
+
+/* ---------------- Master Grid (3 columns) - Responsive ---------------- */
+
+:root{
+  --frame-radius: 20px;
+  --frame-border: 2px;
+  --frame-grad-angle: var(--grad-angle, 320deg);
+  --frame-grad-a: var(rgba(39, 40, 103, 0.8));  
+  --frame-grad-b: var( rgba(54, 172, 201, 0.8));
+  --frame-fill: #fffefe;            /* white interior in both themes */
+
+}
+
+
+.cat-layout .frame-gradient {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: var(--frame-border) solid transparent !important;
+  border-radius: var(--frame-radius) !important;
+
+  /* white fill + blue gradient border */
+  background:
+    linear-gradient(var(--frame-fill), var(--frame-fill)) padding-box,
+    linear-gradient(var(--frame-grad-angle), var(--frame-grad-a), var(--frame-grad-b)) border-box !important;
+
+  box-shadow: 0 6px 18px rgba(0,0,0,.06) !important;
+  padding: 16px;
+}
+
+/* If the SAME element also has .card/.panel styles, make our style win */
+.cat-layout .frame-gradient.card,
+.cat-layout .frame-gradient.panel {
+  background:
+    linear-gradient(var(--frame-fill), var(--frame-fill)) padding-box,
+    linear-gradient(var(--frame-grad-angle), var(--frame-grad-a), var(--frame-grad-b)) border-box !important;
+  border: var(--frame-border) solid transparent !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,.06) !important;
+}
+
+/* 🔧 KEY FIX:
+   When we wrap an existing card inside .frame-gradient,
+   strip the inner card's own bg/border so you don't get the double-shell look. */
+.cat-layout .frame-gradient .card,
+.cat-layout .frame-gradient .panel {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+/* ensure the two mini cards have a gap, not a fused seam */
+.cat-layout .center-top {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.cat-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 320px) minmax(400px, 1fr) minmax(280px, 320px);
+  grid-template-rows: 340px 360px;
+  gap: 16px;
+  align-items: start;
+  margin-top: 8px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* ---------------- Base Panel ---------------- */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+/* -------------- Left column: Websites list -------------- */
+.left-list {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  height: calc(340px + 16px + 360px); /* Adjusted for smaller gap */
+  overflow: hidden;
+  min-width: 0; /* Prevent overflow */
+}
+
+/* Legacy skeletons (safe to keep) */
+.search-pill {
+  height: 40px;
+  margin-bottom: 16px;
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  border-radius: 999px;
+}
+.list-items { display: grid; gap: 14px; padding-right: 16px; }
+.li-row { display: flex; align-items: center; gap: 12px; }
+.li-dot {
+  width: 36px; height: 36px;
+  background: transparent;
+  border: 1px solid var(--stroke);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.li-bar {
+  width: 65%; height: 14px;
+  border: 1px dashed var(--stroke);
+  border-radius: 8px;
+}
+
+/* Faux scrollbar (legacy look) */
+.scrollbar {
+  position: absolute;
+  top: 80px;
+  right: 12px;
+  width: 8px;
+  height: calc(100% - 100px);
+  background: var(--stroke);
+  border-radius: 999px;
+  opacity: 0.6;
+}
+
+/* Search */
+.left-list .list-search { margin-bottom: 12px; }
+.left-list .list-search input {
+  width: 100%;
+  height: 40px;
+  padding: 0 16px;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  border-radius: 999px;
+  outline: none;
+  box-sizing: border-box;
+}
+.left-list .list-search input::placeholder { opacity: .6; }
+
+/* Inner scroll area */
+.left-list .list-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 12px;
+  min-width: 0;
+}
+
+/* A–Z section */
+.alpha-section {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  column-gap: 12px;
+  padding: 2px 2px 10px;
+  min-width: 0;
+}
+.letter {
+  position: sticky;
+  top: 0;
+  grid-column: 1;
+  align-self: start;
+  padding-top: 8px;
+  z-index: 1;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--panel);
+  flex-shrink: 0;
+}
+.alpha-items { 
+  grid-column: 2; 
+  min-width: 0;
+}
+
+/* Rows */
+.site-row {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 8px;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.site-row:hover,
+.site-row.is-active { 
+  background: rgba(0,0,0,0.03); 
+  border-color: var(--stroke); 
+}
+.theme-dark .site-row:hover,
+.theme-dark .site-row.is-active { 
+  background: rgba(255,255,255,0.06); 
+}
+.site-row.is-selected { 
+  outline: 2px solid var(--accent, #1951ab); 
+  outline-offset: 0; 
+}
+
+/* Avatar dots */
+.site-dot {
+  width: 30px; 
+  height: 30px;
+  object-fit: cover;
+  background: transparent; /* No fill */
+  border: 2px solid #999999; /* Grey stroke */
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.site-dot.placeholder { 
+  background: transparent; /* No fill for placeholder too */
+  border: 1.5px solid #999999; /* Grey stroke for placeholder */
+}
+
+/* Names */
+.site-name { 
+  white-space: nowrap; 
+  overflow: hidden; 
+  text-overflow: ellipsis;
+  min-width: 0;
+  color: var(--text); /* Use default text color instead of blue */
+}
+.site-name.pretty-name { 
+  color: var(--text); /* Remove blue accent, use default text color */
+  font-weight: 600; 
+}
+
+/* Custom scrollbar */
+.left-list .list-scroll::-webkit-scrollbar { width: 8px; }
+.left-list .list-scroll::-webkit-scrollbar-track {
+  background: rgb(255, 245, 245);
+  border-radius: 999px;
+}
+.left-list .list-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.25);
+  border-radius: 999px;
+}
+.theme-dark .left-list .list-scroll::-webkit-scrollbar-track { 
+  background: rgba(255,255,255,0.12); 
+}
+.theme-dark .left-list .list-scroll::-webkit-scrollbar-thumb { 
+  background: rgba(255,255,255,0.35); 
+}
+
+/* ---------------- Center Column ---------------- */
+.center-top {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  min-width: 0;
+}
+.mini-card { 
+  height: 140px;
+  min-width: 0;
+}
+
+/* Provided data placement */
+.provided-card {
+  grid-column: 2;
+  grid-row: 2;
+  height: 360px;
+  align-self: start;
+  min-width: 0;
+}
+
+/* ---------------- Right Column ---------------- */
+.cat-layout .risk-card {
+  grid-column: 3;
+  grid-row: 1;
+  height: 340px;
+  min-width: 0;
+}
+.cat-layout .unsub-card {
+  grid-column: 3;
+  grid-row: 2;
+  height: 140px;
+  min-width: 0;
+}
+
+/* ---------------- Skeleton shimmer ---------------- */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background-image: linear-gradient(90deg, rgba(0,0,0,0.04), rgba(0,0,0,0.08), rgba(0,0,0,0.04));
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite linear;
+}
+.theme-dark .skeleton {
+  background-image: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.12), rgba(255,255,255,0.06));
+}
+
+/* ---------------- Minor polish ---------------- */
+.page-title { 
+  margin: 6px 0 14px; 
+  min-width: 0;
+}
+.page-title h1 { 
+  margin: 0; 
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------------- Responsive Breakpoints ---------------- */
+@media (max-width: 1400px) {
+  .cat-layout { 
+    grid-template-columns: minmax(260px, 300px) minmax(350px, 1fr) minmax(260px, 300px);
+    gap: 14px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .cat-layout {
+    grid-template-columns: minmax(280px, 320px) 1fr;
+    grid-template-rows: 320px 320px 140px 340px;
+    gap: 16px;
+  }
+  .left-list { 
+    grid-column: 1; 
+    grid-row: 1 / span 4;
+    height: calc(320px + 320px + 140px + 340px + 48px); /* All rows + gaps */
+  }
+  .center-top { 
+    grid-column: 2; 
+    grid-row: 1;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .cat-layout .risk-card { 
+    grid-column: 2; 
+    grid-row: 2; 
+    height: 320px;
+  }
+  .cat-layout .unsub-card { 
+    grid-column: 2; 
+    grid-row: 3; 
+    height: 140px;
+  }
+  .provided-card { 
+    grid-column: 2; 
+    grid-row: 4; 
+    height: 340px;
+  }
+}
+
+@media (max-width: 900px) {
+  .cat-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    gap: 16px;
+    padding: 0 8px;
+  }
+  .left-list {
+    grid-column: 1;
+    grid-row: auto;
+    height: auto;
+    min-height: 400px;
+    max-height: 500px;
+  }
+  .center-top {
+    grid-column: 1;
+    grid-row: auto;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .provided-card,
+  .cat-layout .risk-card,
+  .cat-layout .unsub-card {
+    grid-column: 1;
+    grid-row: auto;
+    height: 240px;
+    min-height: 240px;
+  }
+  
+  /* Adjust main content padding on mobile */
+  #main {
+    padding: 16px 8px;
+  }
+}
+
+@media (max-width: 600px) {
+  .cat-layout {
+    gap: 12px;
+    padding: 0 4px;
+  }
+  
+  #main {
+    padding: 12px 4px;
+  }
+  
+  .left-list {
+    min-height: 300px;
+    max-height: 400px;
+    padding: 12px;
+  }
+  
+  .mini-card,
+  .provided-card,
+  .cat-layout .risk-card,
+  .cat-layout .unsub-card {
+    height: 200px;
+  }
+}
+
+#main .cat-layout {
+  --frame-border: 12px;   /* try 4px, 6px, 8px */
+}
+
+/* ===== Center title slot + positioning ===== */
+.center-title {
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
+  align-self: start;
+  z-index: 2;
+  min-width: 0;
+}
+.center-title-text {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Desktop-specific adjustments */
+@media (min-width: 1201px) {
+  .center-top { margin-top: 44px; }
+  .cat-layout > .provided-card {
+    position: relative;
+    z-index: 1;
+    justify-self: stretch !important;
+    width: 100% !important;
+    max-width: none !important;
+    transform: translateY(-160px) !important;
+  }
+}
+
+/* Remove transform on smaller screens */
+@media (max-width: 1200px) {
+  .cat-layout > .provided-card {
+    transform: none !important;
+  }
+}
+
+/* ===== Content styles ===== */
+.mini-card.mini-body {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  padding: 16px;
+  box-sizing: border-box;
+}
+.mini-title { 
+  font-weight: 600; 
+  opacity: 0.8; 
+  margin-bottom: 8px;
+}
+.mini-value { 
+  font-size: 32px; 
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+/* Provided data grid */
+.pd-title, .risk-title, .unsub-title { 
+  padding: 14px 16px 6px; 
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pd-error { 
+  padding: 0 16px 12px; 
+  color: #b00020; 
+}
+
+.pd-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  padding: 8px 16px 16px;
+}
+.pd-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: transparent;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.pd-item.ok { background: rgba(76, 175, 80, 0.08); }
+.pd-item.missing { background: rgba(244, 67, 54, 0.06); }
+.pd-field { 
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.pd-status { 
+  opacity: 0.8;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+/* Risk & Unsubscribe blocks */
+.risk-score {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 0 16px;
+  min-width: 0;
+}
+.risk-score-number { 
+  font-size: 40px; 
+  font-weight: 800;
+  line-height: 1;
+}
+.risk-score-label { 
+  font-weight: 600; 
+  opacity: 0.8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.risk-reasons { 
+  margin: 10px 16px 16px; 
+  padding-left: 18px;
+  overflow: hidden;
+}
+
+.unsub-link {
+  display: inline-block;
+  margin: 8px 16px 16px;
+  text-decoration: underline;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: calc(100% - 32px);
+}
+
+/* Mini tiles with icon layout */
+.mini-card.mini-body.mini-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "header"
+    "value";
+  padding: 16px;
+  height: 140px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+/* Header section containing icon and title */
+.mini-header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.mini-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+/* SVG icon styling */
+.mini-icon-svg {
+  width: 20px;
+  height: 20px;
+  transition: filter 0.2s ease;
+}
+
+/* Light Mode - Default (matching your theme variables) */
+.mini-icon-svg {
+  /* Medium gray color for light mode */
+  filter: brightness(0) saturate(100%) invert(48%) sepia(8%) saturate(928%) hue-rotate(201deg) brightness(95%) contrast(86%);
+}
+
+/* Dark Mode (matching your .theme-dark class) */
+.theme-dark .mini-icon-svg {
+  /* Light gray/white color for dark mode */
+  filter: brightness(0) saturate(100%) invert(64%) sepia(11%) saturate(355%) hue-rotate(177deg) brightness(92%) contrast(87%);
+}
+
+/* Hover effects for the mini cards */
+.mini-card:hover .mini-icon-svg {
+  /* Slightly darker on hover in light mode */
+  filter: brightness(0) saturate(100%) invert(19%) sepia(7%) saturate(1225%) hue-rotate(201deg) brightness(97%) contrast(92%);
+}
+
+.theme-dark .mini-card:hover .mini-icon-svg {
+  /* Brighter white on hover in dark mode */
+  filter: brightness(0) saturate(100%) invert(99%) sepia(3%) saturate(82%) hue-rotate(58deg) brightness(118%) contrast(100%);
+}
+
+/* Animation for smooth icon appearance */
+@keyframes iconFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.mini-icon-svg {
+  animation: iconFadeIn 0.3s ease-out;
+}
+
+.mini-title {
+  font-weight: 600;
+  opacity: 0.8;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mini-value-wrap {
+  grid-area: value;
+  align-self: center;
+  justify-self: center;
+  text-align: center;
+  min-width: 0;
+}
+
+.mini-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+  letter-spacing: -0.2px;
+  justify-content: center;
+}
+
+.mini-number { 
+  font-size: 32px; 
+  font-weight: 800; 
+  line-height: 1.1; 
+}
+.mini-unit, .mini-year { 
+  font-size: 18px; 
+  font-weight: 600; 
+  opacity: 0.65; 
+  line-height: 1.1; 
+}
+
+/* Page wrapper under the top nav */
+.category-page,
+.category-wrapper,
+.category-container,
+main {
+  padding-top: calc(var(--topbar-h) + var(--nav-gap));
+}
+
+/* First heading/list on the page */
+.category-header,
+.category-list,
+.category-grid {
+  scroll-margin-top: calc(var(--topbar-h) + var(--nav-gap));
+  margin-top: var(--nav-gap);
+}
+
+/* === Gradient blue frame card (reusable) === */
+:root{
+  --frame-radius: 20px;
+  --frame-border: 2px;
+  /* reusing your global gradient tokens if present; falls back to nice blues */
+  --frame-grad-angle: var(--grad-angle, 120deg);
+  --frame-grad-a: var(--grad-a,rgba(58, 59, 126, 0.8));  
+  --frame-grad-b: var( --grad-b,rgba(54, 172, 201, 0.9));
+}
+
+/* white fill + gradient border using layered backgrounds */
+.frame-gradient {
+  position: relative;
+  border: var(--frame-border) solid transparent;
+  border-radius: var(--frame-radius);
+  background:
+    linear-gradient(#ffffff, #ffffff) padding-box,
+    linear-gradient(var(--frame-grad-angle), var(--frame-grad-a), var(--frame-grad-b)) border-box;
+  box-shadow: 0 6px 18px rgba(0,0,0,.06);
+}
+
+/* If any card already has its own background, neutralize it */
+.frame-gradient > * {
+  background: transparent !important;
+}
+
+/* Optional: a tiny inside padding so content doesn’t touch the border */
+.frame-gradient {
+  padding: 16px;
+}
+
+/* grid that lays out left list | center | right column */
+.cat-layout{
+  display: grid;
+  grid-template-columns: 320px 1fr 360px; /* adjust to your widths */
+  gap: 20px;                               /* ← space between the big columns/cards */
+}
+
+/* the two small top cards in the center column */
+.cat-layout .center-top{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;                                /* ← space between the two mini cards */
+}
+
+/* provided data card needs a little top gap from the minis */
+.cat-layout .provided-slot{
+  margin-top: 16px;
+}
+
+/* keep right column cards separated */
+.cat-layout .risk-card{ margin-top: 0; }
+.cat-layout .unsub-card{ margin-top: 16px; }
+
+/* the list area (A, B, C … groups) */
+.left-list .group{
+  margin-bottom: 16px;
+}
+
+/* each site row */
+.left-list .site-item{
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  margin-bottom: 10px;          /* ← space between rows */
+}
+
+.cat-layout .frame-gradient{
+  padding: 20px;                /* was 16px — bump it up */
+}
+
+/* ===== Category page layout spacing ===== */
+:root{
+  /* change these numbers to adjust spacing */
+  --cat-grid-gap: 90px;   /* space between the 3 big columns/cards */
+  --cat-mini-gap: 20px;   /* space between the two small top cards */
+}
+
+/* main grid: left list | center column | right column */
+/* 3-column grid: left | center | right */
+.cat-layout{
+  display: grid;
+  grid-template-columns: 320px 1fr 360px;
+  gap: var(--cat-grid-gap, 20px);
+  grid-auto-flow: row dense;
+}
+
+/* top two mini cards live in the center column */
+.cat-layout .center-top{
+  grid-column: 2  / 2;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--cat-mini-gap, 16px);
+}
+
+/* Risk card stays in the right column, first row */
+.cat-layout .risk-card{
+  grid-column: 3 / 4;
+  grid-row: 3;
+}
+
+/* src/styles/Category.css */
+.cat-layout .risk-card.frame-gradient{ margin-top:40px; }  /* 12–24px as you like */
+
+
+/* Provided Data spans center + right on row 2 (this removes the “box” beside it) */
+.cat-layout .provided-slot{
+  grid-column: 2 / 4;   /* ← key line */
+  grid-row: 2;
+  margin-top: var(--cat-mini-gap, 16px);
+}
+
+/* Unsubscribe goes below, right column */
+.cat-layout .unsub-card{
+  grid-column: 2 / 4;
+  grid-row: 3;
+  margin-top: var(--cat-mini-gap, 5px);
+}
+
+/* keep the frame above neighbors just in case */
+.cat-layout .provided-slot.frame-gradient { position: relative; z-index: 2; }
+
+
+.cat-layout .frame-gradient .card,
+.cat-layout .frame-gradient .panel {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+/* ===== Hover lift / glow utility ===== */
+.hover-lift{
+  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+  will-change: transform;
+}
+.hover-lift:hover,
+.hover-lift:focus-within{
+  transform: translateY(-3px);
+  box-shadow:
+    0 14px 30px rgba(77,163,255,.20),
+    0 6px 18px rgba(0,0,0,.08);
+  position: relative;
+  z-index: 3; /* sit above neighbors while hovering */
+}
+
+/* Make gradient frames pop just a bit more on hover */
+.frame-gradient.hover-lift:hover,
+.frame-gradient.hover-lift:focus-within{
+  filter: saturate(1.05) brightness(1.02);
+}
+
+/* Search bar hover/focus */
+#top .search{
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+#top .search:hover,
+#top .search:focus-within{
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 2px rgba(77,163,255,.35),
+    0 10px 22px rgba(77,163,255,.12);
+}
+#top .search input{ outline: none; }
+
+/* Respect motion/accessibility + mobile */
+@media (hover: none){
+  .hover-lift:hover{ transform: none; box-shadow: none; }
+}
+@media (prefers-reduced-motion: reduce){
+  .hover-lift{ transition: box-shadow .18s ease; }
+  .hover-lift:hover, .hover-lift:focus-within{ transform: none; }
+}
+
+
+/* ===== DARK MODE HOVER/LIFT — hard override ===== */
+html.theme-dark .hover-lift:hover,
+html.theme-dark .hover-lift:focus-within,
+html.dark .hover-lift:hover,
+html.dark .hover-lift:focus-within{
+  transform: translateY(-2px) !important;
+  box-shadow:
+    0 12px 24px rgba(0,0,0,.55),
+    0 2px 10px rgba(0,0,0,.35) !important;
+  filter: none !important;            /* kill the neon glow */
+  position: relative;
+  z-index: 3;
+}
+
+/* Search bar in dark mode */
+html.theme-dark #top .search:hover,
+html.theme-dark #top .search:focus-within,
+html.dark #top .search:hover,
+html.dark #top .search:focus-within{
+  transform: translateY(-1px) !important;
+  box-shadow:
+    0 0 0 1px rgba(120,200,255,.28),
+    0 10px 22px rgba(0,0,0,.45) !important;
+  filter: none !important;
+}
+
+/* Base frame shadow in dark mode (cards look grounded, not washed out) */
+html.theme-dark .cat-layout .frame-gradient,
+html.dark .cat-layout .frame-gradient{
+  box-shadow: 0 14px 36px rgba(0,0,0,.55) !important;
+}
+
+
+/* =========================================================
+   FINAL HOVER/LIFT OVERRIDES — works in light & dark themes
+   Put this at the very end of Category.css
+   ========================================================= */
+
+/* Theme tokens */
+:root{
+  --lift-y: -3px;
+  --lift-shadow-1: 0 14px 30px rgba(77,163,255,.20);
+  --lift-shadow-2: 0 6px 18px rgba(0,0,0,.08);
+  --lift-ring:     0 0 0 2px rgba(77,163,255,.35);
+  --frame-shadow:  0 6px 18px rgba(0,0,0,.06);
+}
+
+/* Dark mode tokens */
+html.theme-dark,
+html.dark{
+  --lift-y: -2px;  /* smaller jump on dark */
+  --lift-shadow-1: 0 12px 24px rgba(0,0,0,.55);
+  --lift-shadow-2: 0 2px 10px rgba(0,0,0,.35);
+  --lift-ring:     0 0 0 1px rgba(120,200,255,.28);
+  --frame-shadow:  0 14px 36px rgba(0,0,0,.55);
+}
+
+/* Base frame shadow should respect theme */
+.frame-gradient{ box-shadow: var(--frame-shadow) !important; filter: none !important; }
+
+/* Generic hover utility */
+.hover-lift{
+  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+  will-change: transform;
+}
+
+/* HARD OVERRIDE: hover state (wins in both themes) */
+.hover-lift:hover,
+.hover-lift:focus-within{
+  transform: translateY(var(--lift-y)) !important;
+  box-shadow: var(--lift-shadow-1), var(--lift-shadow-2) !important;
+  filter: none !important; /* kill neon/saturation */
+  position: relative;
+  z-index: 3;
+}
+
+/* Search bar hover/focus */
+#top .search{
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+#top .search:hover,
+#top .search:focus-within{
+  transform: translateY(calc(var(--lift-y) + 1px)) !important;
+  box-shadow: var(--lift-ring), var(--lift-shadow-1) !important;
+  filter: none !important;
+}
+
+/* Ensure inner "card/panel" skins don't re-introduce glows inside frames */
+.frame-gradient .card,
+.frame-gradient .panel{
+  filter: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border: 0 !important;
+}
+
+/* =========================================
+   DARK MODE: readable text inside white cards
+   (affects any .frame-gradient card on Category page)
+   ========================================= */
+
+/* Use the same dark text on white in BOTH themes */
+:root{
+  --fg-on-white: #000000; /* slate-900 */
+}
+
+/* All content inside white frame cards should use dark text, no text-shadows */
+.cat-layout .frame-gradient{
+  color: var(--fg-on-white) !important;
+}
+.cat-layout .frame-gradient h1,
+.cat-layout .frame-gradient h2,
+.cat-layout .frame-gradient h3,
+.cat-layout .frame-gradient h4,
+.cat-layout .frame-gradient p,
+.cat-layout .frame-gradient li,
+.cat-layout .frame-gradient label,
+.cat-layout .frame-gradient span,
+.cat-layout .frame-gradient small,
+.cat-layout .frame-gradient strong{
+  color: var(--fg-on-white) !important;
+  text-shadow: none !important;
+  -webkit-text-stroke: 0 !important;
+}
+
+/* EXCEPTION: keep the Risk card's bottom plate white-on-dark */
+.cat-layout .frame-gradient .risk-plate,
+.cat-layout .frame-gradient .risk-plate *{
+  color: var(--risk-plate-fg) !important; /* comes from RiskCard.css */
+  text-shadow: none !important;
+}
+
+/* Sharpen search placeholder in dark header */
+html.theme-dark #top .search::placeholder,
+html.dark #top .search::placeholder,
+html.theme-dark #top .search input::placeholder,
+html.dark #top .search input::placeholder{
+  color: rgba(255,255,255,.85) !important;
+  text-shadow: none !important;
+}
+
+/* --- text colors for any frame card --- */
+:root{
+  --fg-on-white: #0f172a; /* dark text on white */
+  --fg-on-dark:  #e6e9ef; /* light text on dark */
+}
+
+/* By default, frame cards use dark text (since fill is white) */
+.cat-layout .frame-gradient{
+  color: var(--card-fg, var(--fg-on-white)) !important;
+}
+.cat-layout .frame-gradient h1,
+.cat-layout .frame-gradient h2,
+.cat-layout .frame-gradient h3,
+.cat-layout .frame-gradient h4,
+.cat-layout .frame-gradient p,
+.cat-layout .frame-gradient li,
+.cat-layout .frame-gradient label,
+.cat-layout .frame-gradient span,
+.cat-layout .frame-gradient small,
+.cat-layout .frame-gradient strong{
+  color: inherit !important;
+  text-shadow: none !important;
+}
+
+/* Risk card: BLACK fill in dark mode, with light text */
+html.theme-dark .risk-card.frame-gradient,
+html.dark .risk-card.frame-gradient{
+  --frame-fill: #000000;            /* <- black card interior */
+  --card-fg:   var(--fg-on-dark);   /* <- light text color on dark */
+}
+
+/* keep plate readable (already dark) */
+.cat-layout .frame-gradient .risk-plate,
+.cat-layout .frame-gradient .risk-plate *{
+  color: var(--risk-plate-fg) !important;
+  text-shadow: none !important;
+}
+
+/* Text colors for card content */
+:root{
+  --fg-on-white: #0f172a;
+  --fg-on-dark:  #e6e9ef;
+}
+
+/* Cards (frame) inherit text color via --card-fg; default to dark text on white */
+.cat-layout .frame-gradient{
+  color: var(--card-fg, var(--fg-on-white)) !important;
+}
+
+/* Risk card BLACK in dark mode (both patterns supported) */
+html.theme-dark .risk-card.frame-gradient,
+html.dark .risk-card.frame-gradient{
+  --frame-fill: #000000;
+  --card-fg:   var(--fg-on-dark);
+}
+
+/* If you're using a WRAPPER .frame-gradient around the RiskCard */
+html.theme-dark .frame-gradient:has(.risk-card),
+html.dark .frame-gradient:has(.risk-card){
+  --frame-fill: #000000;
+  --card-fg:   var(--fg-on-dark);
+}
+
+/* Keep the plate readable */
+.cat-layout .frame-gradient .risk-plate,
+.cat-layout .frame-gradient .risk-plate *{
+  color: var(--risk-plate-fg) !important;
+}
+
+/* =========================
+   DARK MODE: force black cards
+   (Provided Data, both Mini cards, Risk, + both Search bars)
+   ========================= */
+
+/* Text tokens */
+:root{
+  --fg-on-white: #000000;
+  --fg-on-dark:  #e6e9ef;
+}
+
+/* 1) Cards with the blue border frame */
+html.theme-dark :where(.cat-layout .provided-slot.frame-gradient,
+                       .cat-layout .center-top > .frame-gradient,
+                       .cat-layout .risk-card.frame-gradien),
+html.dark       :where(.cat-layout .provided-slot.frame-gradient,
+                       .cat-layout .center-top > .frame-gradient,
+                       .cat-layout .risk-card.frame-gradient){
+  /* FORCE the interior to black and text to light */
+  --frame-fill: #000000 !important;
+  --card-fg:   var(--fg-on-dark) !important;
+
+  /* Repaint background in case your earlier rule is winning */
+  background:
+    linear-gradient(#000000, #000000) padding-box,
+    linear-gradient(var(--frame-grad-angle,90deg),
+                    var(--frame-grad-a,#4da3ff),
+                    var(--frame-grad-b,#67e8f9)) border-box !important;
+
+  color: var(--fg-on-dark) !important;
+}
+
+/* Make all text inside those cards readable, kill any text shadows */
+html.theme-dark .cat-layout :where(.provided-slot.frame-gradient,
+                                   .center-top > .frame-gradient,
+                                   .risk-card.frame-gradient) :is(h1,h2,h3,h4,p,li,span,label,strong,small),
+html.dark       .cat-layout :where(.provided-slot.frame-gradient,
+                                   .center-top > .frame-gradient,
+                                   .risk-card.frame-gradient) :is(h1,h2,h3,h4,p,li,span,label,strong,small){
+  color: var(--fg-on-dark) !important;
+  text-shadow: none !important;
+}
+
+/* Risk card plate stays readable (it’s dark by design) */
+.cat-layout .frame-gradient .risk-plate,
+.cat-layout .frame-gradient .risk-plate *{
+  color: var(--risk-plate-fg) !important;
+}
+
+/* 2) Header search bar (top-right) */
+html.theme-dark #top .search,
+html.dark #top .search{
+  background: #1b1c1d !important;
+  color: #e6e9ef !important;
+  border-radius: 9999px !important;
+}
+html.theme-dark #top .search input,
+html.dark       #top .search input{
+  color: #e6e9ef !important;
+}
+html.theme-dark #top .search input::placeholder,
+html.dark       #top .search input::placeholder{
+  color: rgba(230,233,239,.75) !important;
+}
+
+/* 3) Left list search field */
+html.theme-dark .left-list .search,
+html.dark       .left-list .search{
+  background: #0b1220 !important;
+  color: #e6e9ef !important;
+}
+html.theme-dark .left-list .search input,
+html.dark       .left-list .search input{
+  color: #e6e9ef !important;
+}
+html.theme-dark .left-list .search input::placeholder,
+html.dark       .left-list .search input::placeholder{
+  color: rgba(230,233,239,.75) !important;
+}

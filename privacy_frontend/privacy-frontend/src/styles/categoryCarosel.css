@@ -1,0 +1,442 @@
+/* ================================
+   Category Carousel (clean rewrite)
+   ================================ */
+
+/* ---- TUNERS (edit these to change look) ---- */
+/* Local scope so it won't affect other pages */
+
+
+.category-scroll {
+  --chip-gap: 20px;                /* space between icon & name */
+  --chip-pad-y: 10px;              /* vertical padding */
+  --chip-pad-x: 14px;              /* horizontal padding */
+  --chip-radius: 12px;             /* pill corners of the whole chip */
+
+  --icon-tile-size: 52px;          /* square behind the icon */
+  --icon-tile-radius: 14px;        /* corners of the icon tile */
+  --icon-size: 30px;               /* actual icon size inside the tile */
+
+  --icon-tile-bg: rgba(255,255,255,.65);
+  --icon-tile-border: rgba(2,6,23,.08);
+
+  --category-font-size: 1rem;      /* label text size */
+  --category-font-weight: 600;     /* label weight */
+
+  /* Fallback hover shadow if you didn't define one globally */
+  --hover-shadow-fallback: 0 8px 24px rgba(2, 6, 23, 0.12);
+}
+
+/* Dark-mode tile adjustment */
+.theme-dark .category-scroll {
+  --icon-tile-bg: rgba(255,255,255,.10);
+  --icon-tile-border: rgba(255,255,255,.14);
+}
+
+/* ---- Chip base: horizontal, rounded rectangle ---- */
+.category-scroll .category,
+.category-scroll .category-item,
+.category-scroll .category-pill,
+.category-scroll .chip {
+  display: inline-flex;
+  flex-direction: row;             /* ensure icon left, text right */
+  align-items: left;
+  gap: var(--chip-gap);
+  padding: var(--chip-pad-y) var(--chip-pad-x);
+  min-height: calc(var(--icon-tile-size) + 8px); /* fits bigger tiles */
+  border-radius: var(--chip-radius);
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  box-shadow: var(--shadow-sm);
+  line-height: 1.1;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease,
+    background-color .18s ease,
+    border-color .18s ease,
+    color .18s ease;
+}
+
+/* ---- Icon tile ---- */
+.category-scroll .category .category-icon,
+.category-scroll .category-item .category-icon,
+.category-scroll .category-pill .category-icon,
+.category-scroll .chip .category-icon {
+  width: var(--icon-tile-size);
+  height: var(--icon-tile-size);
+  flex: 0 0 var(--icon-tile-size);
+  display: flex;
+  align-items: center;
+  justify-content: center; /* keeps icon centered inside the tile */
+  box-sizing: border-box;
+  color: black;
+
+  background: var(--icon-tile-bg);
+  border: 1px solid var(--icon-tile-border);
+  border-radius: var(--icon-tile-radius);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.35),
+    0 1px 2px rgba(2,6,23,.04);
+  line-height: 0;
+}
+
+
+/* Fallback if you DON'T have a .category-icon wrapper */
+.category-scroll .category > :first-child,
+.category-scroll .category-item > :first-child,
+.category-scroll .category-pill > :first-child,
+.category-scroll .chip > :first-child {
+  /* treat first child as the icon tile */
+  width: var(--icon-tile-size);
+  height: var(--icon-tile-size);
+  flex: 0 0 var(--icon-tile-size);
+  display: grid;
+  place-items: left;
+  background: var(--icon-tile-bg);
+  border: 1px solid var(--icon-tile-border);
+  border-radius: var(--icon-tile-radius);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.35),
+    0 1px 2px rgba(2,6,23,.04);
+  line-height: 0;
+}
+
+/* Icon size inside the tile (img or svg) */
+.category-scroll .category .category-icon img,
+.category-scroll .category .category-icon svg,
+.category-scroll .category > :first-child img,
+.category-scroll .category > :first-child svg,
+.category-scroll .category-item .category-icon img,
+.category-scroll .category-item .category-icon svg,
+.category-scroll .category-item > :first-child img,
+.category-scroll .category-item > :first-child svg,
+.category-scroll .category-pill .category-icon img,
+.category-scroll .category-pill .category-icon svg,
+.category-scroll .category-pill > :first-child img,
+.category-scroll .category-pill > :first-child svg,
+.category-scroll .chip .category-icon img,
+.category-scroll .chip .category-icon svg,
+.category-scroll .chip > :first-child img,
+.category-scroll .chip > :first-child svg {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  display: block;
+  object-fit: contain;
+}
+
+/* ---- Label (category name) ---- */
+.category-scroll .category .label,
+.category-scroll .category-item .label,
+.category-scroll .category-pill .label,
+.category-scroll .chip .label,
+.category-scroll .category .category-label,
+.category-scroll .category-item .category-label,
+.category-scroll .category-pill .category-label,
+.category-scroll .chip .category-label,
+.category-scroll .category > :not(:first-child) {
+  font-size: var(--category-font-size);
+  font-weight: var(--category-font-weight);
+  letter-spacing: .2px;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-align: left;
+}
+
+/* ---- Hover / focus (matches welcome card vibe) ---- */
+.category-scroll .category:hover,
+.category-scroll .category:focus-visible,
+.category-scroll .category-item:hover,
+.category-scroll .category-item:focus-visible,
+.category-scroll .category-pill:hover,
+.category-scroll .category-pill:focus-visible,
+.category-scroll .chip:hover,
+.category-scroll .chip:focus-visible {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: var(--hover-shadow, var(--hover-shadow-fallback));
+  background: var(--panel);
+  border-color: var(--primary-400, var(--accent, #a9c1e9));
+  outline: none;
+}
+
+/* Click feedback */
+.category-scroll .category:active,
+.category-scroll .category-item:active,
+.category-scroll .category-pill:active,
+.category-scroll .chip:active {
+  transform: translateY(0) scale(1);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---- Scroll container niceties ---- */
+.category-scroll {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  gap: 10px;
+  padding: 2px; /* avoids shadow cutoff */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+.category-scroll > * { scroll-snap-align: start; }
+
+/* Optional scrollbar polish */
+.category-scroll::-webkit-scrollbar { height: 8px; }
+.category-scroll::-webkit-scrollbar-thumb {
+  background: var(--stroke);
+  border-radius: 999px;
+}
+.category-scroll:hover::-webkit-scrollbar-thumb {
+  background: var(--primary-300, var(--stroke));
+}
+
+/* ---- Mobile tweaks ---- */
+@media (max-width: 480px) {
+  .category-scroll { gap: 8px; }
+  .category-scroll .category,
+  .category-scroll .category-item,
+  .category-scroll .category-pill,
+  .category-scroll .chip {
+    padding: .5rem .7rem;
+    gap: 8px;
+  }
+  .category-scroll .category .label,
+  .category-scroll .category .category-label,
+  .category-scroll .category > :not(:first-child) {
+    font-size: .92rem;
+  }
+}
+
+
+/* For Carousel arrows */
+
+/* ===== Carousel arrows (soft rounded tile) ===== */
+/* Tuners — edit these to change look */
+.category-scroll {
+  --arrow-w: 42px;                         /* width of arrow tile */
+  --arrow-h: 56px;                         /* height of arrow tile */
+  --arrow-radius: 4px;                    /* corner roundness */
+  --arrow-bg: rgba(255,255,255,.80);       /* tile background */
+  --arrow-border: rgba(0, 0, 0, 0.1);        /* tile border */
+  --arrow-icon: #2a3a4b;                   /* chevron color */
+  --arrow-shadow: 0 6px 18px rgba(2,6,23,.12);  /* drop shadow */
+}
+
+.theme-dark .category-scroll {
+  --arrow-bg: rgba(255,255,255,.12);
+  --arrow-border: rgba(255,255,255,.20);
+  --arrow-icon: #e5e7eb;
+  --arrow-shadow: 0 8px 20px rgba(0,0,0,.40);
+  --arrow-w: 34px; 
+--arrow-h: 48px;
+--arrow-radius: 4px;
+--arrow-bg: rgba(255,255,255,.88);
+--arrow-border: rgba(2,6,23,.14);
+--arrow-icon: #1f2937;
+--arrow-shadow: 0 8px 22px rgba(2,6,23,.16);
+}
+
+/* Position the arrows over the scroll strip */
+.category-scroll {
+  position: relative;   /* ensures absolute arrows anchor correctly */
+  padding-left: 42px;   /* leave space for left arrow overlap */
+  padding-right: 42px;  /* leave space for right arrow overlap */
+}
+
+/* === Gradient tuners (edit just these to try colors) === */
+/* Pastel donut colors (light, not loud) */
+.category-scroll {
+  /* --grad-a-strong: #f8a539;
+  --grad-b-strong: #da3f18; */
+  --grad-a: rgba(39, 40, 103);  /* cyan */
+  --grad-b:rgba(54, 172, 201);  /* blue */
+  --grad-angle:150deg; 
+  --grad-split: 10%;          /* 10% A, then blend, rest B */
+  --grad-blend: 4%;           /* size of the blend zone */
+
+  /* --grad-a: var(--grad-a-strong);
+     --grad-b: var(--grad-b-strong); */
+}
+
+/* All category chips use the gradient */
+.category-scroll .category,
+.category-scroll .category-item,
+.category-scroll .category-pill,
+.category-scroll .chip {
+  background: linear-gradient(var(--grad-angle), var(--grad-a), var(--grad-b));
+  border-color: transparent;
+  color: #fff; /* text becomes white */
+}
+
+/* Keep your normal look; switch to gradient on hover/focus */
+.category-scroll .category:hover,
+.category-scroll .category:focus-visible,
+.category-scroll .category-item:hover,
+.category-scroll .category-item:focus-visible,
+.category-scroll .category-pill:hover,
+.category-scroll .category-pill:focus-visible,
+.category-scroll .chip:hover,
+.category-scroll .chip:focus-visible {
+  background: linear-gradient(var(--grad-angle), var(--grad-a), var(--grad-b));
+  border-color: transparent;
+  color: #fff;
+}
+
+/* Glassy icon tile on gradient */
+.category-scroll .category .category-icon {
+  background: rgba(255, 255, 255, 0.201);
+  border: 1px solid rgba(255,255,255,.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.35),
+    0 1px 2px rgba(2,6,23,.10);
+}
+
+/* If your icons are SVGs that use currentColor, turn them white */
+.category-scroll .category .category-icon { color:#fff; }
+.category-scroll .category .category-icon svg { stroke: currentColor; fill: none; }
+
+/* If your icons are PNGs, you can *test* this filter (remove if it looks off) */
+.category-scroll .category .category-icon img {
+  filter: brightness(1.2) saturate(1.1);
+  /* optional: invert to white-ish, comment out if it ruins colors */
+  /* filter: invert(1) brightness(1.15) contrast(1.1); */
+}
+
+.category-scroll .category,
+.category-scroll .category-item,
+.category-scroll .category-pill,
+.category-scroll .chip {
+  transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease, border-color .18s ease, color .18s ease;
+}
+.category-scroll .category:hover,
+.category-scroll .category-item:hover,
+.category-scroll .category-pill:hover,
+.category-scroll .chip:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: var(--hover-shadow, 0 8px 24px rgba(2,6,23,.12));
+}
+
+.category-scroll .category .category-label { text-shadow: 0 1px 1px rgba(0,0,0,.18); }
+
+/* Make chip a positioning context */
+.category-scroll .category,
+.category-scroll .category-item,
+.category-scroll .category-pill,
+.category-scroll .chip {
+  position: relative;
+  overflow: hidden;
+  /* control overlay strength here */
+  --chip-whiten: .15;   /* try .12 light · .22 medium · .35 strong */
+}
+
+/* Translucent white film on top of the gradient */
+.category-scroll .category::after,
+.category-scroll .category-item::after,
+.category-scroll .category-pill::after,
+.category-scroll .chip::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(255,255,255,var(--chip-whiten));
+  pointer-events: none;
+}
+
+/* reset old arrow tiles */
+.category-scroll .scroll-left,
+.category-scroll .scroll-right {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* --- tighten gap between top nav and categories --- */
+header#top {
+  margin-bottom: 24px !important;     /* was ~14px via other rules */
+  padding-bottom: 10px !important;     /* keeps the header bubble neat */
+}
+
+.category-scroll {
+  margin-top: 0 !important;           /* some builds add 10px here */
+  padding-top: 0 !important;          /* just in case */
+}
+
+/* unify icon + label color on the chip */
+.category-scroll .category { 
+  color: #ffffff;                    /* label white on gradient chips */
+}
+.category-scroll .category .category-icon {
+  color: #ffffff !important;         /* icon color (for SVGs that use currentColor) */
+}
+
+/* make all shapes inside the SVG take the chip color */
+.category-scroll .category .category-icon svg,
+.category-scroll .category .category-icon svg * {
+  stroke: currentColor !important;
+  fill: currentColor !important;  /* use 'none' if your icons are outlines */
+}
+
+/* ==== CATEGORY ICON COLOR – HARD OVERRIDE (SVG + PNG) ==== */
+
+/* 1) Choose the color once per theme */
+:root{
+  --cat-icon-color: #ffffff;   /* light mode icon/label color */
+}
+.dark, .theme-dark{
+  --cat-icon-color: #ffffff;   /* dark mode icon/label color (change if you want) */
+}
+
+/* 2) Make each chip (and its label) use that color */
+.category-scroll .category{
+  color: var(--cat-icon-color) !important;
+}
+
+/* 3) Ensure the icon wrapper inherits that color (beats older 'color:black') */
+.category-scroll .category .category-icon,
+.category-scroll .category > :first-child{   /* also covers your 'fallback first child' tile */
+  color: inherit !important;
+}
+
+/* 4) Force SVGs to actually use currentColor (even if paths had hard-coded fills) */
+.category-scroll .category .category-icon svg,
+.category-scroll .category > :first-child svg,
+.category-scroll .category .category-icon svg *,
+.category-scroll .category > :first-child svg *{
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
+
+/* 5) If your icons are PNGs/IMGs, tint them to the same color */
+.category-scroll .category .category-icon img,
+.category-scroll .category > :first-child img{
+  /* White result from a dark base icon */
+  filter: brightness(0) invert(1) !important;
+}
+
+:root{
+  /* distance between chips */
+  --cat-chip-gap: 12px;
+  /* horizontal breathing room for the whole strip */
+  --cat-strip-pad-x: 8px;
+}
+
+/* the scroll container */
+.category-scroll{
+  padding-inline: var(--cat-strip-pad-x);
+}
+
+/* the inner flex row that holds the chips */
+.category-scroll .categories{
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--cat-chip-gap);
+  justify-content: flex-start;   /* don't stretch between ends */
+  align-items: center;
+  margin: 0;                     /* ensure no outer margins collapse */
+}
+
+/* each chip */
+.category-scroll .category{
+  margin: 0 !important;          /* let `gap` do the spacing */
+}

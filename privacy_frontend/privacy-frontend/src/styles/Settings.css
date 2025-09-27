@@ -1,0 +1,261 @@
+/* =========================
+   Settings page – Modern Wide Layout
+   ========================= */
+
+#app #main.settings-wide{
+  max-width: none !important;
+  width: calc(100% - var(--sidebar-collapsed)) !important;
+  margin-left: var(--sidebar-collapsed) !important;
+  padding: 40px 60px;                  /* Much more generous padding */
+  transition: margin-left .25s ease, width .25s ease;
+}
+
+/* When sidebar is hovered, adjust the main content */
+#sidebar:hover ~ #main.settings-wide {
+  margin-left: var(--sidebar-expanded) !important;
+  width: calc(100% - var(--sidebar-expanded)) !important;
+}
+
+/* Make the layout fill the row */
+#app #main.settings-wide .settings-layout{
+  display: grid;
+  gap: 0;                              /* Remove gaps between cards for seamless look */
+  grid-template-columns: 1fr;
+  align-items: start;
+  width: 100%;
+  max-width: 1200px;                   /* Set a reasonable max width like the reference */
+  margin: 0 auto;                      /* Center the content */
+}
+
+/* Cards as seamless sections */
+#app #main.settings-wide .settings-layout > .card.panel{
+  width: 100% !important;
+  max-width: none !important;
+  padding: 0 !important;               /* Remove card padding */
+  box-sizing: border-box;
+  background: transparent !important;  /* Remove card background */
+  border: none !important;             /* Remove borders */
+  border-radius: 0 !important;         /* Remove border radius */
+  box-shadow: none !important;         /* Remove shadows */
+  border-bottom: 1px solid var(--stroke); /* Add subtle separator */
+}
+
+/* Last card shouldn't have bottom border */
+#app #main.settings-wide .settings-layout > .card.panel:last-child {
+  border-bottom: none;
+}
+
+/* Section headers */
+#app #main.settings-wide .card.panel h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 32px 0 8px 0;
+  color: var(--text);
+}
+
+/* Section descriptions */
+#app #main.settings-wide .card.panel > p {
+  margin: 0 0 24px 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* Clean field rows like the reference - SIMPLE LINES */
+#app #main.settings-wide .field-row{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;      /* Space between like reference */
+  padding: 16px 0;                     /* Vertical padding only */
+  width: 100%;
+  border-bottom: 1px solid var(--stroke); /* Simple line separator */
+  margin: 0;
+  background: transparent;             /* No background boxes */
+  border-radius: 0;                    /* No rounded corners */
+}
+
+/* Remove border from last field row in each section */
+#app #main.settings-wide .stack .field-row:last-child {
+  border-bottom: none;
+}
+
+/* Also remove border from last item in any container */
+#app #main.settings-wide .field-row:last-child {
+  border-bottom: none;
+}
+
+/* Labels on the left */
+#app #main.settings-wide .field-row .label{ 
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text);
+  flex: 0 0 auto;
+  margin-right: auto;
+}
+
+/* Middle section (value) should be minimal */
+#app #main.settings-wide .field-row > div:nth-child(2) {
+  flex: 1;
+  text-align: right;                   /* Right align like reference */
+  margin-right: 16px;
+}
+
+#app #main.settings-wide .field-row > div:nth-child(2) strong {
+  color: var(--muted);
+  font-weight: 400;                    /* Less bold */
+  font-size: 14px;
+}
+
+/* Actions on the right */
+#app #main.settings-wide .field-row .actions{ 
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+/* Clean button styling like reference */
+#app #main.settings-wide .btn {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid var(--stroke);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text);
+  transition: all 0.2s ease;
+  font-weight: 400;
+}
+
+#app #main.settings-wide .btn:hover {
+  background: var(--panel);
+  border-color: var(--muted);
+}
+
+/* Primary button */
+#app #main.settings-wide .btn.primary {
+  background: var(--text);
+  color: var(--panel);
+  border-color: var(--text);
+}
+
+#app #main.settings-wide .btn.primary:hover {
+  opacity: 0.8;
+}
+
+/* Input styling */
+#app #main.settings-wide input,
+#app #main.settings-wide textarea {
+  padding: 8px 12px;
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 14px;
+  transition: all 0.2s ease;
+  min-width: 200px;
+}
+
+#app #main.settings-wide input:focus,
+#app #main.settings-wide textarea:focus {
+  outline: none;
+  border-color: var(--text);
+}
+
+/* Page title */
+#app #main.settings-wide .page-title h1 {
+  margin: 0 0 32px;
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Breadcrumbs styling */
+#app #main.settings-wide .breadcrumbs {
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+/* Stack spacing within sections */
+#app #main.settings-wide .stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0;                              /* No gaps, borders handle separation */
+}
+
+/* Avatar section special styling */
+#app #main.settings-wide #personal-info .row {
+  align-items: center;
+  padding: 20px 0;
+  gap: 20px;
+  border-bottom: 1px solid var(--stroke);
+}
+
+/* Row spread styling (for read-only items) */
+#app #main.settings-wide .row.spread {
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--stroke);
+}
+
+#app #main.settings-wide .row.spread:last-child {
+  border-bottom: none;
+}
+
+/* Form sections like Login & Security */
+#app #main.settings-wide form {
+  margin: 0;
+}
+
+#app #main.settings-wide form .stack {
+  margin: 24px 0;
+}
+
+#app #main.settings-wide label.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--stroke);
+}
+
+#app #main.settings-wide label.row .label {
+  margin-right: auto;
+}
+
+#app #main.settings-wide label.row input {
+  flex: 0 0 auto;
+}
+
+/* List styling */
+#app #main.settings-wide ul {
+  margin: 16px 0;
+  padding-left: 20px;
+}
+
+#app #main.settings-wide li {
+  margin-bottom: 8px;
+  color: var(--muted);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  #app #main.settings-wide {
+    padding: 20px 24px;
+  }
+  
+  #app #main.settings-wide .settings-layout {
+    max-width: none;
+  }
+  
+  #app #main.settings-wide .field-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    text-align: left;
+  }
+  
+  #app #main.settings-wide .field-row > div:nth-child(2) {
+    text-align: left;
+    margin-right: 0;
+  }
+}

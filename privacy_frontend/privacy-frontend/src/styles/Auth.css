@@ -1,0 +1,290 @@
+/* Optional (nice font) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+/* Boxicons (for the little user/lock icons) 
+   If your app has index.html, add this there instead of @import: 
+   <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+*/
+@import url('https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css');
+
+:root{
+  --bg: #efefef;
+  --panel: #ffffff;
+  --ink: #222;
+  --muted: #777;
+  --stroke: #e5e5e5;
+  --dark: #0f0f10;
+  --radius: 16px;
+  --shadow: 0 10px 30px rgba(0,0,0,.12);
+  --accent: #111; /* login button */
+}
+
+*{box-sizing:border-box}
+html,body,#root{height:100%}
+body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+
+.auth-page{
+  min-height:100vh;
+  display:grid;
+  place-items:center;
+  padding:24px;
+}
+
+.auth-card{
+  position:relative;
+  width: 860px;
+  max-width: 96vw;
+  aspect-ratio: 16/9;        /* keeps same “wide” proportion as the video */
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+/* Angled dark side */
+.auth-card::after{
+  content:"";
+  position:absolute; inset:0;
+  background: var(--dark);
+  /* Diagonal cut similar to the short */
+  clip-path: polygon(45% 0, 100% 0, 100% 100%, 62% 100%);
+}
+
+/* Right text that sits on the dark area */
+.auth-hero{
+  position:absolute;
+  right: 6%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34%;
+  color:#fff;
+  text-align:center;
+  z-index:2;
+  pointer-events:none;
+}
+
+.auth-hero h2{
+  letter-spacing:1px;
+  line-height:1.02;
+  font-size: clamp(28px, 4vw, 44px);
+  margin:0 0 10px;
+  font-weight: 800;
+}
+.auth-hero p{
+  margin:0 auto;
+  font-size: clamp(12px, 1.4vw, 14px);
+  color:#d6d6d6;
+}
+
+/* Left form */
+.auth-form{
+  position:absolute;
+  left: 8%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40%;
+  z-index:3; /* above the dark overlay */
+}
+
+.auth-title{
+  font-size: clamp(22px, 2.6vw, 28px);
+  margin:0 0 6px;
+  font-weight: 800;
+}
+
+.input-box{
+  position: relative;
+  margin: 26px 0 32px;
+}
+
+.input-box input{
+  width: 100%;
+  padding: 18px 44px 10px 0; /* space for right icon */
+  border: none;
+  background: transparent;
+  border-bottom: 2px solid #cfcfcf;
+  font-size: 16px;
+  outline: none;
+  color: var(--ink);
+}
+
+/* Floating label */
+.input-box label{
+  position: absolute;
+  left: 0;
+  top: 14px;
+  color: var(--muted);
+  pointer-events: none;
+  transition: .22s ease;
+}
+
+.input-box input:focus + label,
+.input-box input:not(:placeholder-shown) + label,
+.input-box input:valid + label{
+  transform: translateY(-16px);
+  font-size: 12px;
+  color: #444;
+}
+
+/* Underline animation bar */
+.input-box .bar{
+  content:"";
+  position:absolute;
+  left:0; right:0; bottom:-2px;
+  height:2px;
+  background:#000;
+  transform: scaleX(0);
+  transform-origin:left;
+  transition: transform .22s ease;
+}
+.input-box input:focus ~ .bar{ transform: scaleX(1); }
+
+/* Icons inside the input (right side) */
+.input-box .bx{
+  position:absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 20px;
+  color:#7e7e7e;
+}
+
+/* Button & meta */
+.btn-primary{
+  margin-top: 8px;
+  width: 100%;              /* full width, same as input fields */
+  height: 44px;
+  border: none;
+  outline: none;
+  border-radius: 8px;       /* matches input box corners */
+  background: #0f0f10;         /* black button */
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s ease, transform .05s ease;
+}
+
+.btn-primary:hover{
+  background: #222;         /* slightly lighter black on hover */
+}
+
+.btn-primary:active{
+  transform: translateY(1px);
+}
+
+.auth-meta{
+  margin-top: 12px;
+  font-size: 12.5px;
+  color: #5a5a5a;
+}
+.auth-meta a{
+  color:#1a1a1a;
+  text-decoration:none;
+  font-weight:600;
+}
+
+/* Responsiveness */
+@media (max-width: 860px){
+  .auth-card{ aspect-ratio:auto; padding:28px 22px 180px; }
+  .auth-card::after{
+    clip-path: polygon(0 62%, 100% 40%, 100% 100%, 0% 100%); /* shifts angled dark to bottom on small screens */
+  }
+  .auth-hero{
+    right: 50%;
+    transform: translate(50%, 0);
+    top: auto;
+    bottom: 24px;
+    width: 86%;
+  }
+  .auth-form{ position:relative; left:auto; top:auto; transform:none; width:100%; }
+}
+
+/* ---------- Mirror layout (black left, form right) ---------- */
+.auth-card.mirror::after{
+  /* put the dark panel on the LEFT */
+  clip-path: polygon(0 0, 50% 0, 38% 100%, 0 100%);
+}
+
+.auth-hero.mirror{
+  left: 6%;
+  right: auto;
+  text-align: center;
+}
+
+.auth-form.mirror{
+  right: 8%;
+  left: auto;
+}
+
+/* Step dots + small helpers */
+.top-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.step-dots{ display:flex; gap:6px; }
+.step-dots .dot{
+  width:10px; height:10px; border-radius:50%;
+  background:#cfcfcf;
+}
+.step-dots .dot.active{ background:#000; }
+
+.checkbox-row{
+  display:flex; align-items:center; gap:10px;
+  font-size: 13px; color:#444; user-select:none;
+}
+.checkbox-row input{ width:16px; height:16px; }
+
+.row{ display:flex; align-items:center; }
+.gap8{ gap:8px; }
+
+.btn-text{
+  background:transparent;
+  border:none; color:#000; font-weight:600;
+  padding:10px 12px; cursor:pointer;
+}
+
+/* Mobile stack still works—dark angle drops to bottom */
+@media (max-width: 860px){
+  .auth-card.mirror::after{
+    clip-path: polygon(0 62%, 100% 40%, 100% 100%, 0% 100%);
+  }
+  .auth-hero.mirror{
+    left: 50%; transform: translate(-50%, 0);
+    bottom: 24px; top:auto; width:86%;
+  }
+  .auth-form.mirror{
+    position:relative; right:auto; transform:none; width:100%;
+  }
+}
+
+/* radio rows */
+.radio-group{ display:flex; flex-direction:column; gap:12px; margin: 8px 0 20px; }
+.radio-row{
+  display:flex; align-items:center; gap:12px;
+  padding:12px 14px; border:1px solid #dcdcdc; border-radius:10px;
+  cursor:pointer; user-select:none; transition:border .2s ease, background .2s ease;
+}
+.radio-row input{ width:18px; height:18px; }
+.radio-row .radio-label{ display:flex; align-items:center; gap:10px; }
+.radio-row .bx{ font-size:18px; color:#6b6b6b; }
+.radio-row.active{ border-color:#000; background:#fafafa; }
+
+/* center helper for Link-as-button */
+.center{ display:flex; align-items:center; justify-content:center; text-decoration:none; }
+
+/* OTP */
+.otp-row{
+  display:flex; gap:10px; margin: 12px 0 20px;
+}
+.otp-box{
+  width:48px; height:54px; text-align:center; font-size:22px;
+  border:none; border-bottom:2px solid #cfcfcf; outline:none;
+}
+.otp-box:focus{ border-bottom-color:#000; }
+
+/* make disabled primary look dim */
+.btn-primary:disabled{ opacity:.6; cursor:not-allowed; }
+

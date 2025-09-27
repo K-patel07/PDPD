@@ -1,0 +1,211 @@
+/* =========================================================
+   RiskCard.css — “Satisfaction-style” semi-gauge + bottom plate
+   (appearance only; colors for the arc still come from JS)
+   ========================================================= */
+
+/* ---- Container ---- */
+:root{
+  --risk-font: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --risk-title-size: 90px;
+  --risk-subtitle-size: 50px;
+  --risk-value-size: 36px;  /* big number on the plate */
+  --risk-caption-size: 12px;
+}
+
+.risk-card { font-family: var(--risk-font); }
+
+.risk-title     { font-size: var(--risk-title-size); }
+.risk-subtitle  { font-size: var(--risk-subtitle-size); }
+.risk-plate .value   { font-size: var(--risk-value-size); }
+.risk-plate .caption { font-size: var(--risk-caption-size); }
+
+:root{
+  --risk-face-bg: #f1f6ff;  /* pick your color */
+}
+html.theme-dark, html.dark{
+  --risk-face-bg: #16233b;  /* darker variant for dark mode (optional) */
+}
+
+.risk-card[data-band="low"]      .risk-face { background: #a9faa2; }  /* minty */
+.risk-card[data-band="medium"]   .risk-face { background: #f7d565; }  /* soft yellow */
+.risk-card[data-band="high"]     .risk-face { background: #ff4343; }  /* soft red */
+.risk-card[data-band="critical"] .risk-face { background: #c60000; }
+.risk-card[data-band="unknown"]  .risk-face { background: #b6d8fb; }  /* neutral */
+
+/* force the smiley glyph to render in black */
+.risk-face img{
+  filter: brightness(0) saturate(100%);
+  /* optional: make it super crisp on retina */
+  image-rendering: -webkit-optimize-contrast;
+}
+
+
+.risk-card{
+  position: relative;
+  /* leave background/border to .frame-gradient if applied */
+  padding: 16px 16px 96px;   /* bottom space reserved for the plate */
+  min-height: 260px;
+  border-radius: inherit;    /* follow outer frame radius */
+}
+
+.risk-face{
+  background: radial-gradient(circle at 40% 35%, #80b1ff, #3181ea 70%, #1156b7);
+}
+
+
+/* ---- Heading ---- */
+.risk-heading{ margin-bottom: 8px; }
+.risk-title{
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+.risk-subtitle{
+  font-size: 13px;
+  opacity: .75;
+}
+
+/* ---- Gauge (semi-circle) ---- */
+.risk-gauge{
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  margin: 6px auto 10px;   /* center it visually */
+}
+.gauge-svg{
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ---- Center face bubble ---- */
+.risk-face{
+  position: absolute;
+  left: 50%;
+  top: 57%;                      /* visually centered within arc */
+  transform: translate(-50%, -50%);
+  width: 56px; height: 56px;
+  border-radius: 999px;
+  background: var(--risk-face-bg);
+  display: grid; place-items: center;
+  box-shadow: 0 10px 28px rgba(0,0,0,.10);
+}
+.risk-face img{ width: 30px; height: 30px; }
+
+/* ---- Bottom plate (0%  [value]  100%) ---- */
+.risk-plate{
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  min-width: 68%;
+  max-width: 90%;
+  padding: 12px 14px 10px;
+  border-radius: 16px;
+  background: var(--risk-plate-bg);
+  color: var(--risk-plate-fg);
+  display: grid;
+  grid-template-areas:
+    "min value max"
+    "min caption max";
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 2px 8px;
+  box-shadow: 0 10px 24px rgba(0,0,0,.12);
+}
+.risk-plate .min{
+  grid-area: min;
+  justify-self: start;
+  font-size: 12px;
+  opacity: .75;
+}
+.risk-plate .max{
+  grid-area: max;
+  justify-self: end;
+  font-size: 12px;
+  opacity: .75;
+}
+.risk-plate .value{
+  grid-area: value;
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+.risk-plate .caption{
+  grid-area: caption;
+  font-size: 12px;
+  opacity: .85;
+  text-align: center;
+  margin-top: -2px;
+}
+
+/* ---- Loading & error ---- */
+.risk-loading{
+  padding: 24px 0;
+  text-align: center;
+  opacity: .85;
+}
+.risk-error{
+  margin-top: 8px;
+  font-size: 12px;
+  color: #e53935;
+}
+
+/* ---- Theme tokens (light/dark) ---- */
+:root{
+  /* background of the track behind the colored arc */
+  --risk-track: #e8edf5;
+
+  /* center face bubble */
+  --risk-face-bg: #ffffff;
+
+  /* bottom plate colors (dark plate like the reference) */
+  --risk-plate-bg: rgba(15, 23, 42, .92);
+  --risk-plate-fg: #ffffff;
+}
+
+/* center headings + gauge + plate text */
+.risk-card { text-align: center; }
+.risk-heading { text-align: center; }
+
+.cat-layout .risk-card.frame-gradient { justify-self: center; }
+
+/* Your app toggles classes on <html>, support both */
+html.theme-dark,
+html.dark{
+  --risk-track: rgba(255, 255, 255, 0.484);
+  --risk-face-bg: #000000;
+  --risk-plate-bg: rgba(35, 35, 35, 0.92);
+  --risk-plate-fg: #ffffff;
+}
+
+/* ---- Motion preferences ---- */
+@media (prefers-reduced-motion: reduce) {
+  .gauge-svg path { transition: none !important; }
+}
+
+/* ---- Small screens: tighten sizing ---- */
+@media (max-width: 480px){
+  .risk-card{ padding: 14px 14px 90px; min-height: 250px; }
+  .risk-face{ width: 50px; height: 50px; top: 58%; }
+  .risk-face img{ width: 26px; height: 26px; }
+  .risk-plate .value{ font-size: 30px; }
+}
+
+.risk-title, .risk-subtitle{
+  color: var(--fg-on-white) !important;
+  text-shadow: none !important;
+}
+
+/* Make the track visible on white, and keep strokes crisp even if scaled */
+:root{
+  --risk-track: #d9e2ef; /* slightly darker than before so it shows on white */
+}
+.gauge-svg path{ vector-effect: non-scaling-stroke; }
+
+/* Ensure nothing overlays the gauge arc unexpectedly */
+.risk-gauge{ z-index: 1; }
+.risk-face{ z-index: 2; }
+.risk-plate{ z-index: 3; }

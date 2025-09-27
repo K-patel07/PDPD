@@ -1,0 +1,140 @@
+/* src/styles/theme.light.css */
+
+/* Apply when <html class="theme-light"> OR as default :root */
+html, body { font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+
+:root, .theme-light {
+  /* base */
+  --bg: #ffffff;
+  --bg-color: var(--bg);
+
+  --text: #1e293b;
+  --text-color: var(--text);
+
+  --panel: #ffffff;
+  --card-color: var(--panel);
+
+  --muted: #64748b;
+  --stroke: #d1d5db;
+
+  --accent: #3b82f6;
+  --accent-color: var(--accent);
+
+  /* optional sidebar tint */
+  --sidebar-bg: #ffffff;
+
+  /* ADVANCED ENHANCEMENTS */
+  /* Enhanced backgrounds */
+  --bg-gradient: linear-gradient(135deg, #f5f7fb 0%, #f1f5f9 100%);
+  --panel-elevated: #ffffff;
+  --panel-glass: rgba(255, 255, 255, 0.958);
+  --panel-hover: rgba(255, 255, 255, 0.9);
+
+  /* Extended colors */
+  --text-secondary: #64748b;
+  --accent-hover: #2563eb;
+  --accent-light: #dbeafe;
+  --stroke-hover: #cbd5e1;
+
+  /* Advanced shadow system */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --shadow-accent: 0 10px 15px -3px rgba(59, 130, 246, 0.2);
+  --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.15);
+
+  /* Glass morphism */
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.18);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  --backdrop-blur: blur(12px);
+
+  /* Gradient collection */
+  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  --gradient-accent: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  --gradient-danger: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+
+  /* Status colors */
+  --success: #10b981;
+  --success-light: #d1fae5;
+  --warning: #f59e0b;
+  --warning-light: #fef3c7;
+  --danger: #ef4444;
+  --danger-light: #fee2e2;
+  --info: #3b82f6;
+  --info-light: #dbeafe;
+
+  /* Sidebar enhancements */
+  --sidebar-shadow: 2px 0 20px rgba(0, 0, 0, 0.08);
+  --sidebar-border: rgba(226, 232, 240, 0.6);
+  --sidebar-glass: rgba(255, 255, 255, 0.95);
+
+  /* Interactive states */
+  --hover-bg: rgba(0, 0, 0, 0.04);
+  --active-bg: rgba(59, 130, 246, 0.1);
+  --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.12);
+
+  /* Animation timing */
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Border radius system */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+
+  /* Button effects */
+  --btn-shadow: var(--shadow-sm);
+  --btn-shadow-hover: var(--shadow-md);
+  --btn-shadow-active: var(--shadow-lg);
+
+  /* Card effects */
+  --card-shadow: var(--shadow-md);
+  --card-shadow-hover: var(--shadow-lg);
+  --card-border-radius: var(--radius-lg);
+
+  /* Navigation effects */
+  --nav-active-bg: var(--active-bg);
+  --nav-hover-bg: var(--hover-bg);
+  --nav-indicator: var(--gradient-accent);
+}
+
+/* Advanced component styles */
+.theme-light {
+  /* Card enhancements */
+  --card-shadow: var(--shadow-md);
+  --card-shadow-hover: var(--shadow-lg);
+  --card-border-radius: 12px;
+  --card-backdrop: var(--backdrop-blur);
+
+  /* Button enhancements */
+  --button-shadow: var(--shadow-sm);
+  --button-shadow-hover: var(--shadow-md);
+  --button-gradient: var(--gradient-accent);
+
+  /* Input enhancements */
+  --input-bg: rgba(255, 255, 255, 0.9);
+  --input-border: var(--stroke);
+  --input-focus-border: var(--accent);
+  --input-focus-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+
+  /* Navigation enhancements */
+  --nav-active-bg: rgba(59, 130, 246, 0.1);
+  --nav-hover-bg: rgba(59, 130, 246, 0.05);
+  --nav-indicator: var(--gradient-accent);
+
+  /* Animations */
+  --transition-fast: 0.15s ease-out;
+  --transition-normal: 0.3s ease-out;
+  --transition-slow: 0.5s ease-out;
+}

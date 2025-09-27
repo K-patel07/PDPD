@@ -1,0 +1,60 @@
+/* ====== REMOVE / DISABLE GIF (no markup changes needed) ====== */
+
+/* stop reserving space for art on the right */
+.greet-card .greet-content,
+.welcome-card .greet-content,
+.user-welcome-card .greet-content{
+  padding-right: 0 !important;
+}
+
+/* hide the whole art stack */
+.greet-art{ display: none !important; }
+
+/* nuke art-related variables */
+:root{
+  --greet-art-size: 0px !important;
+  --greet-art-reserve: 0px !important;
+  --greet-art-offset-right: 0px !important;
+}
+
+/* remove the overhang-based auto spacer (since there’s no art now) */
+.greet-card, .welcome-card, .user-welcome-card{
+  margin-bottom: var(--gap-welcome-to-next, 0px) !important;
+}
+
+/* Ensure our card’s own gradient shows (no dimming mask) */
+.greet-card::before,
+.welcome-card::before,
+.user-welcome-card::before{
+  display: none !important;   /* disables the bg ::before layer */
+}
+
+/* Light theme gradient */
+.greet-card{
+  background: linear-gradient(100deg, rgba(73,74,148), rgba(56,150,174,0.9)) !important;
+  color: #fff; /* optional: ensures good contrast */
+}
+
+/* Dark theme gradient */
+.dark .greet-card, .theme-dark .greet-card{
+  background: linear-gradient(100deg, rgba(116,117,195,), rgba(0,23,29,0.92)) !important;
+  color: #fff; /* optional */
+}
+
+:root{ --gap-welcome-to-next: 24px; } /* or whatever you like */
+
+.greet-card p, .welcome-card p, .user-welcome-card p{ 
+  margin: 0; 
+  font-size: 1.0rem; 
+  font-weight: 600; 
+  letter-spacing: .2px; 
+  color: rgb(255, 255, 255); 
+} 
+
+.dark .greet-card p, .welcome-card p, .user-welcome-card p{ 
+  margin: 0; 
+  font-size: 1.0rem; 
+  font-weight: 600; 
+  letter-spacing: .2px; 
+  color: rgb(255, 255, 255); 
+}

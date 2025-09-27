@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Privacy Pulse</title>
+  <style>
+    :root{--bg:#f6f8fb;--card:#fff;--muted:#6b7280;--ink:#0f172a;--ring:#e5e7eb;--ok:#111827;}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);font:14px/1.4 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter}
+    .wrap{width:360px;max-height:600px;overflow:auto;padding:12px}
+    .title{font-weight:800;font-size:18px;color:var(--ink);margin:0 0 12px}
+    .card{background:var(--card);border:1px solid var(--ring);border-radius:14px;padding:12px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+    .sub{color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px}
+    .big{font-size:24px;font-weight:800;color:var(--ink);margin-top:4px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .fld{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--ring);border-radius:12px;background:#fafbff}
+    .dot{width:14px;height:14px;border-radius:9999px;border:2px solid #2563eb;display:inline-block;position:relative}
+    .dot.on::after{content:"";position:absolute;inset:2px;border-radius:9999px;background:#2563eb}
+    .muted{color:var(--muted)}
+    .gauge{width:100px;height:50px;border-top-left-radius:100px;border-top-right-radius:100px;background:conic-gradient(#e5e7eb 0 180deg);position:relative;overflow:hidden;margin:8px auto 0}
+    .needle{position:absolute;bottom:-2px;left:50%;width:2px;height:54px;background:#111827;transform-origin:bottom center;transform:rotate(0deg)}
+    .pct{font-weight:800;font-size:18px;text-align:center;margin-top:6px}
+    .row{display:flex;gap:12px}
+    .center{text-align:center}
+    .small{font-size:12px}
+    .toggleRow{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+    .on{color:#0a0;font-weight:600;}
+    .off{color:#a00;font-weight:600;}
+    button{padding:6px 10px;border:none;border-radius:6px;background:#2563eb;color:#fff;cursor:pointer;}
+    button:hover{background:#1e4fc1;}
+    .hint{color:#666;margin-top:4px;font-size:12px;}
+
+    /* Footer tweaks */
+    .footer{ text-align:center; margin-top:8px; } /* tighter gap vs. 16px */
+    .btn{ display:inline-block; margin-top:8px; padding:8px 14px; border-radius:8px;
+          background:#2563eb; color:#fff; font-weight:600; text-align:center; text-decoration:none }
+    .btn:hover{ background:#1e4fc1 }
+    .subnote{ margin-top:4px; font-size:14px; font-weight:600; color:#4b5563; } /* bigger + bolder */
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- Toggle row at the top -->
+    <div class="toggleRow">
+      <div>Status: <span id="status" class="off">OFF</span></div>
+      <button id="toggle">Turn ON</button>
+    </div>
+    <div class="hint">Stays this way until you change it.</div>
+
+    <!-- Site info -->
+    <h1 id="siteTitle" class="title" style="margin-top:14px;">Loading…</h1>
+
+    <!-- Screen Time + Risk beside each other -->
+    <div class="row">
+      <div class="card" style="flex:1;">
+        <div class="sub">⏱️ Screen Time</div>
+        <div id="screenTime" class="big muted">—</div>
+      </div>
+      <div class="card" style="flex:1; text-align:center;">
+        <div class="sub">⚠️ Risk Rate</div>
+        <div class="gauge"><div id="needle" class="needle"></div></div>
+        <div id="riskPct" class="pct">0%</div>
+        <div id="riskText" class="small muted">Unknown Risk Level</div>
+      </div>
+    </div>
+
+    <!-- Provided Data -->
+    <div class="card" style="margin-top:8px;"> <!-- reduced from 12px -->
+      <div class="sub">Provided Data</div>
+      <div class="grid" id="fieldsGrid" style="margin-top:8px;">
+        <!-- filled by JS -->
+      </div>
+    </div>
+
+    <!-- Dashboard link -->
+    <div class="footer">
+      <a id="dashboardLink" class="btn" href="#">Go to Dashboard</a>
+      <div class="subnote">For more information</div>
+    </div>
+
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
