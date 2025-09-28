@@ -82,8 +82,14 @@ export default function Signup() {
       return;
     }
 
-    if (form.password.length < 6) {
-      setMessage({ type: 'error', text: 'Password must be at least 6 characters' });
+    // Match backend strong policy: 8+ chars, upper, lower, number, symbol
+    const strongPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$/;
+    if (!strongPassword.test(form.password)) {
+      setMessage({
+        type: 'error',
+        text:
+          'Password must be 8+ chars and include upper, lower, number, and symbol',
+      });
       setLoading(false);
       return;
     }

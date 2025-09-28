@@ -29,7 +29,7 @@ async function jsonFetch(url, opts = {}) {
 
 class AuthService {
   static async signup({ username, email, password }) {
-    const r = await jsonFetch(`${API_BASE}/api/auth/signup`, {
+    const r = await jsonFetch(`${API_BASE}/api/auth/register`, {
       method: "POST",
       body: JSON.stringify({ username, email, password }),
     });
@@ -48,13 +48,13 @@ class AuthService {
 
   // Email OTP
   static async requestEmailOtp(email) {
-    return jsonFetch(`${API_BASE}/api/auth/email-otp/request`, {
+    return jsonFetch(`${API_BASE}/api/auth/otp/send`, {
       method: "POST",
       body: JSON.stringify({ email }),
     });
   }
   static async verifyEmailOtp({ email, code }) {
-    const r = await jsonFetch(`${API_BASE}/api/auth/email-otp/verify`, {
+    const r = await jsonFetch(`${API_BASE}/api/auth/otp/verify`, {
       method: "POST",
       body: JSON.stringify({ email, code }),
     });
