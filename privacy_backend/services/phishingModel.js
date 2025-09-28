@@ -106,12 +106,43 @@ const SAFE_DOMAINS = new Set([
   "figma.com","openai.com","amazon.com","linkedin.com","binge.com.au",
 ]);
 
+/** Known phishing domains that should always be flagged as high risk */
+const PHISHING_DOMAINS = new Set([
+  "ytsrs.com",           // YouTube phishing site
+  "youtube-verify.com",  // Common YouTube phishing
+  "youtube-security.com", // Common YouTube phishing
+  "facebook-security.com", // Facebook phishing
+  "google-security.com",   // Google phishing
+  "amazon-security.com",   // Amazon phishing
+  "paypal-security.com",   // PayPal phishing
+  "apple-security.com",    // Apple phishing
+  "microsoft-security.com", // Microsoft phishing
+  "netflix-security.com",   // Netflix phishing
+  "instagram-security.com", // Instagram phishing
+  "twitter-security.com",   // Twitter phishing
+  "discord-security.com",   // Discord phishing
+  "spotify-security.com",   // Spotify phishing
+  "dropbox-security.com",   // Dropbox phishing
+  "adobe-security.com",     // Adobe phishing
+  "ebay-security.com",      // eBay phishing
+  "walmart-security.com",   // Walmart phishing
+  "target-security.com",    // Target phishing
+  "bestbuy-security.com",   // Best Buy phishing
+]);
+
 function clampForAllowlist(urlString, score) {
   try {
     const u = new URL(urlString);
     const host = u.hostname.replace(/^www\./, "");
     const parsed = psl.parse(host);
     const domain = parsed.domain || host;
+    
+    // Check for known phishing domains first
+    if (PHISHING_DOMAINS.has(domain)) {
+      return Math.max(score, 0.9); // Force high phishing score
+    }
+    
+    // Check for safe domains
     if (SAFE_DOMAINS.has(domain) && score < 0.99) return Math.min(score, 0.15);
   } catch { /* ignore */ }
   return score;
@@ -221,6 +252,19 @@ async function classifyPhishing(input) {
 
     const url = toUrl(input);
     if (!url) return { ok: false, phishingScore: 0, error: "Invalid URL/hostname" };
+
+    // Check for known phishing domains first (works even without API)
+    try {
+      const u = new URL(url);
+      const host = u.hostname.replace(/^www\./, "");
+      const parsed = psl.parse(host);
+      const domain = parsed.domain || host;
+      
+      if (PHISHING_DOMAINS.has(domain)) {
+        if (LOG_PHISH) console.log("[phishingModel] Known phishing domain:", domain);
+        return { ok: true, phishingScore: 0.9, url, label: "phishing", model: "known-phishing" };
+      }
+    } catch { /* ignore URL parsing errors */ }
 
     let result;
     
