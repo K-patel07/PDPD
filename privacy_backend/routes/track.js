@@ -12,6 +12,7 @@ const { detectCategoryForVisit } = require("../services/categorizer");
 const { classifyPhishing } = require("../services/phishingModel");
 const computeRisk = require("../services/riskScorer"); // returns { phishing_risk,data_risk,combined_risk,risk_score,band }
 const { isTracker } = require("../services/blocklist");
+const { calculateTrackerRisk } = require("../services/trackerDetector");
 
 /* ----------------------------- Config ------------------------------ */
 const SESSION_TIMEOUT_MINUTES = 30;
@@ -562,6 +563,9 @@ router.post("/submit", requireAuth, async (req, res) => {
     try {
       const ph = await classifyPhishing(hostname);
       const phishingRisk = clampNum(ph?.phishingScore ?? ph?.score ?? 0, 0, 1, 0);
+      
+      // Calculate tracker risk
+      const trackerRisk = calculateTrackerRisk(hostname);
 
       const flags = {
         name: submitted.submitted_name,
@@ -573,7 +577,9 @@ router.post("/submit", requireAuth, async (req, res) => {
         gender: submitted.submitted_gender,
         country: submitted.submitted_country,
       };
-      const risk = (await computeRisk(flags, phishingRisk, hostname)) || {};
+      
+      // Use the new weighted risk calculation with tracker risk
+      const risk = computeRisk(flags, phishingRisk, hostname, trackerRisk) || {};
       await db.query(
         `
         INSERT INTO public.risk_assessments
@@ -604,7 +610,7 @@ router.post("/submit", requireAuth, async (req, res) => {
 
     // log helpful info once
     const trueKeys = Object.entries(submitted).filter(([, v]) => v).map(([k]) => k).join(", ");
-    console.log(`[submit] saved: ${hostname} user:${ext_user_id} flags{ ${trueKeys} }`);
+    console.log(`[submit] saved: ${hostname} user:${ext_user_id} flags{ ${trueKeys} } risk:${risk.risk_score}% (phishing:${(phishingRisk*100).toFixed(1)}% data:${(risk.data_risk*100).toFixed(1)}% tracker:${(trackerRisk*100).toFixed(1)}%)`);
 
     // Debug: Check if data was actually inserted
     try {
