@@ -1,10 +1,26 @@
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Node/React
 node_modules/
 dist/
 build/
 coverage/
+.cache/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# env & secrets
 .env
 .env.*
-*.log
-.vscode/
-.DS_Store
-Thumbs.db
+*.local
+
+# subfolders (if any)
+privacy_backend/node_modules/
+privacy_backend/dist/
+privacy_frontend/node_modules/
+privacy_frontend/dist/
