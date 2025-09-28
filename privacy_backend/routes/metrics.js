@@ -128,21 +128,20 @@ router.get("/site-risk", async (req, res, next) => {
  */
 router.get("/category-breakdown", async (req, res, next) => {
   try {
-    const { userId, extUserId } = resolveUser(req);
-    if (!userId && !extUserId) {
-      return res.status(400).json({ ok: false, error: "userId or extUserId required" });
+    const { extUserId } = resolveUser(req);
+    if (!extUserId) {
+      return res.status(400).json({ ok: false, error: "extUserId required" });
     }
 
     const sql = `
       SELECT v.category,
              SUM(COALESCE(v.visit_count, 0))::int AS visits
       FROM public.site_visits v
-      WHERE ($1::int  IS NULL OR v.user_id     = $1)
-        AND ($2::text IS NULL OR v.ext_user_id = $2)
+      WHERE ($1::text IS NULL OR v.ext_user_id = $1)
       GROUP BY v.category
       ORDER BY visits DESC NULLS LAST, v.category ASC NULLS LAST;
     `;
-    const { rows } = await dbq(sql, [userId, extUserId]);
+    const { rows } = await dbq(sql, [extUserId]);
     res.json({ ok: true, items: rows });
   } catch (e) {
     next(e);
