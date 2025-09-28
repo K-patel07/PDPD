@@ -3,12 +3,22 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 
-/* ----------------------------- small helpers ------------------------------ */
+/* ------------------------------------------------------------------
+   Small helpers
+------------------------------------------------------------------- */
 
-// Prefer extUserId if passed; keep userId for older clients
+// Prefer extUserId (camel) but accept ext_user_id (snake). Keep userId for legacy.
 function resolveUser(req) {
-  const userId = req.query.userId != null ? Number(req.query.userId) : null;
-  const extUserId = req.query.extUserId != null ? String(req.query.extUserId) : null;
+  const userIdRaw = req.query.userId;
+  const extCamel = req.query.extUserId;
+  const extSnake = req.query.ext_user_id;
+
+  const userId = userIdRaw != null ? Number(userIdRaw) : null;
+  const extUserId =
+    extCamel != null ? String(extCamel).trim() :
+    extSnake != null ? String(extSnake).trim() :
+    null;
+
   return { userId: Number.isFinite(userId) ? userId : null, extUserId };
 }
 
@@ -66,49 +76,54 @@ async function buildFieldExprs() {
   };
 }
 
-/* ------------------------------- routes ------------------------------ */
-// routes/metrics.js  — replace the /site-risk handler with this version
+/* ------------------------------------------------------------------
+   Routes
+------------------------------------------------------------------- */
+
+/**
+ * GET /api/metrics/site-risk?hostname=&extUserId= OR &ext_user_id=
+ * Return latest risk snapshot for the site (score 0–100 int).
+ */
 router.get("/site-risk", async (req, res, next) => {
   try {
     const { extUserId } = resolveUser(req);
-    const host = normalizeHostname(req.query.hostname);
+    const hostIn = String(req.query.hostname || "").trim();
 
-    if (!extUserId || !host) {
-      return res.status(400).json({ ok: false, error: "extUserId and hostname are required" });
+    if (!extUserId || !hostIn) {
+      return res.status(400).json({ ok: false, error: "hostname and extUserId required" });
     }
+
+    const raw = hostIn.startsWith("http") ? hostIn : `https://${hostIn}`;
+    const host = normalizeHostname(raw);
+    if (!host) return res.status(400).json({ ok: false, error: "invalid hostname" });
 
     const sql = `
       SELECT
         COALESCE(
-          r.risk_score,
-          ROUND(r.combined_risk * 100),
-          ROUND(r.phishing_risk * 100),
+          r.risk_score,                  -- prefer explicit %
+          ROUND(r.combined_risk * 100),  -- else combine
+          ROUND(r.phishing_risk * 100),  -- else phishing
           0
         )::int AS score,
         r.band,
         r.updated_at
-      FROM risk_assessments r
-      JOIN websites w ON w.id = r.website_id
+      FROM public.risk_assessments r
+      JOIN public.websites w ON w.id = r.website_id
       WHERE r.ext_user_id = $1::text
         AND REGEXP_REPLACE(LOWER(COALESCE(w.hostname,'')), '^www\\.', '') = LOWER($2::text)
       ORDER BY r.updated_at DESC
       LIMIT 1;
     `;
-
-    const { rows } = await (db.pool?.query ? db.pool.query(sql, [extUserId, host])
-                                           : db.query(sql, [extUserId, host]));
-    if (!rows.length) {
-      return res.json({ ok: true, score: 0, band: "Unknown" });
-    }
+    const { rows } = await dbq(sql, [extUserId, host]);
+    if (!rows.length) return res.json({ ok: true, score: 0, band: "Safe", updated_at: null });
     return res.json({ ok: true, ...rows[0] });
   } catch (e) {
     next(e);
   }
 });
 
-
 /**
- * GET /api/metrics/category-breakdown?userId=... or &extUserId=...
+ * GET /api/metrics/category-breakdown?userId=... or &extUserId=/&ext_user_id=
  * Returns total *visits* per category (summing visit_count), not just number of sites.
  */
 router.get("/category-breakdown", async (req, res, next) => {
@@ -121,7 +136,7 @@ router.get("/category-breakdown", async (req, res, next) => {
     const sql = `
       SELECT v.category,
              SUM(COALESCE(v.visit_count, 0))::int AS visits
-      FROM site_visits v
+      FROM public.site_visits v
       WHERE ($1::int  IS NULL OR v.user_id     = $1)
         AND ($2::text IS NULL OR v.ext_user_id = $2)
       GROUP BY v.category
@@ -135,17 +150,14 @@ router.get("/category-breakdown", async (req, res, next) => {
 });
 
 /**
- * GET /api/metrics/category-risk?extUserId=...
- * For each category, compute the average latest risk % (0–100) across that user's websites.
- * - Risk source: risk_assessments (latest per website_id for this extUserId)
- * - Category source: site_visits (latest category per website_id for this extUserId)
+ * GET /api/metrics/category-risk?extUserId= OR &ext_user_id=
+ * For each category, compute the average latest risk % across that user's websites.
  */
 router.get("/category-risk", async (req, res, next) => {
   try {
-    const extUserId = String(req.query.extUserId || "").trim();
+    const { extUserId } = resolveUser(req);
     if (!extUserId) return res.status(400).json({ ok: false, error: "extUserId required" });
 
-    // detect a timestamp column on site_visits for "latest category" selection
     const cols = await getCols("public", "site_visits");
     const tsCol =
       (cols.has("last_visited") && `"last_visited"`) ||
@@ -162,7 +174,7 @@ router.get("/category-risk", async (req, res, next) => {
     const sql = `
       WITH visits AS (
         SELECT website_id, category, ${timeExpr} AS ts
-        FROM site_visits
+        FROM public.site_visits
         WHERE ext_user_id = $1
           AND category IS NOT NULL
       ),
@@ -181,7 +193,7 @@ router.get("/category-risk", async (req, res, next) => {
             ROUND(r.phishing_risk * 100),
             0
           )::int AS score
-        FROM risk_assessments r
+        FROM public.risk_assessments r
         WHERE r.ext_user_id = $1
         ORDER BY r.website_id, r.updated_at DESC
       )
@@ -207,19 +219,18 @@ router.get("/category-risk", async (req, res, next) => {
 });
 
 /**
- * GET /api/metrics/login-frequency?extUserId=...&range=weekly|monthly|yearly[&mode=topsite]
+ * GET /api/metrics/login-frequency?extUserId= OR &ext_user_id=&range=weekly|monthly|yearly[&mode=topsite]
  * Source of truth: site_visits.visit_count (prefers singular; falls back to legacy plural if present).
  */
 router.get("/login-frequency", async (req, res, next) => {
   try {
-    const extUserId = String(req.query.extUserId || "").trim();
+    const { extUserId } = resolveUser(req);
     if (!extUserId) return res.status(400).json({ ok: false, error: "extUserId required" });
 
     const range = String(req.query.range || "weekly").toLowerCase();
     const mode  = String(req.query.mode  || "").toLowerCase();
     const useTop = mode === "topsite";
 
-    // whitelist the bucket unit + back window (rolling, ends at last activity)
     let unit = "day", back = "6 days";
     if (range === "monthly") { unit = "month"; back = "5 months"; }
     if (range === "yearly")  { unit = "year";  back = "4 years"; }
@@ -241,7 +252,6 @@ router.get("/login-frequency", async (req, res, next) => {
       cols.has("visit_counts") ? `"visit_counts"` : null;
 
     if (!tsCol) {
-      // cannot build a time series without a timestamp column; return empty frame
       const empty = await dbq(
         `SELECT generate_series(
            date_trunc('${unit}', NOW()) - interval '${back}',
@@ -256,7 +266,7 @@ router.get("/login-frequency", async (req, res, next) => {
 
     const lastSql = `
       SELECT COALESCE(MAX(${tsCol}) FILTER (WHERE ext_user_id = $1), NOW()::timestamptz) AS end_ts
-      FROM site_visits
+      FROM public.site_visits
     `;
 
     if (useTop) {
@@ -273,7 +283,7 @@ router.get("/login-frequency", async (req, res, next) => {
             ${hostCol ? `${hostCol}::text` : `'unknown'`} AS hostname,
             ${tsCol}::timestamptz AS ts,
             ${vcCol ? `${vcCol}::int` : `1::int`} AS vc
-          FROM site_visits
+          FROM public.site_visits
           WHERE ext_user_id = $1
             ${hostCol ? `AND ${hostCol} IS NOT NULL AND ${hostCol} <> ''` : ``}
             AND ${tsCol} >= (date_trunc('${unit}', (SELECT end_ts FROM (${lastSql}) z) - interval '${back}'))
@@ -317,7 +327,7 @@ router.get("/login-frequency", async (req, res, next) => {
       agg AS (
         SELECT date_trunc('${unit}', ${tsCol})::date AS bucket,
                SUM(${vcCol ? vcCol : "1"})::int AS value
-        FROM site_visits
+        FROM public.site_visits
         WHERE ext_user_id = $1
           AND ${tsCol} >= (date_trunc('${unit}', (SELECT end_ts FROM (${lastSql}) z) - interval '${back}'))
           AND ${tsCol} <  (date_trunc('${unit}', (SELECT end_ts FROM (${lastSql}) z)) + '1 ${unit}'::interval)
@@ -335,17 +345,15 @@ router.get("/login-frequency", async (req, res, next) => {
   }
 });
 
-
 /* -------------------- Provided Data (supports both shapes) ------------------- */
 
 /**
- * GET /api/metrics/provided-data?extUserId=...&category=...&limit=50
+ * GET /api/metrics/provided-data?extUserId= OR &ext_user_id=&category=...&limit=50
  * Aggregates latest submissions per site for the given category.
- * Works with either submitted_* boolean columns or fields_detected JSONB.
  */
 router.get("/provided-data", async (req, res, next) => {
   try {
-    const extUserId = String(req.query.extUserId || "").trim();
+    const { extUserId } = resolveUser(req);
     const category  = String(req.query.category || "").trim();
     const limit     = Math.min(Number(req.query.limit || 50) || 50, 200);
 
@@ -372,8 +380,8 @@ router.get("/provided-data", async (req, res, next) => {
           ${F.gender}  AS gender,
           ${F.country} AS country,
           w.hostname AS site_hostname
-        FROM field_submissions s
-        LEFT JOIN websites w ON w.id = s.website_id
+        FROM public.field_submissions s
+        LEFT JOIN public.websites w ON w.id = s.website_id
         WHERE s.ext_user_id = $1
           AND s.category    = $2
           AND (
@@ -387,7 +395,7 @@ router.get("/provided-data", async (req, res, next) => {
           r.risk_score,
           r.band,
           r.updated_at
-        FROM risk_assessments r
+        FROM public.risk_assessments r
         WHERE r.ext_user_id = $1
         ORDER BY r.website_id, r.updated_at DESC
       )
@@ -423,13 +431,12 @@ router.get("/provided-data", async (req, res, next) => {
 });
 
 /**
- * GET /api/metrics/provided-data/site?extUserId=...&hostname=...
+ * GET /api/metrics/provided-data/site?extUserId= OR &ext_user_id=&hostname=
  * Aggregates submissions for a single site (by canonical hostname).
- * Works with either submitted_* boolean columns or fields_detected JSONB.
  */
 router.get("/provided-data/site", async (req, res, next) => {
   try {
-    const extUserId = String(req.query.extUserId || "").trim();
+    const { extUserId } = resolveUser(req);
     const canonHost = normalizeHostname(String(req.query.hostname || ""));
 
     if (!extUserId) return res.status(400).json({ ok: false, error: "extUserId required" });
@@ -441,7 +448,7 @@ router.get("/provided-data/site", async (req, res, next) => {
       WITH canon AS ( SELECT $2::text AS p ),
       target AS (
         SELECT id AS website_id
-        FROM websites w
+        FROM public.websites w
         WHERE REGEXP_REPLACE(LOWER(w.hostname), '^www\\.', '') = (SELECT p FROM canon)
         LIMIT 1
       ),
@@ -460,8 +467,8 @@ router.get("/provided-data/site", async (req, res, next) => {
           ${F.age}     AS age,
           ${F.gender}  AS gender,
           ${F.country} AS country
-        FROM field_submissions s
-        LEFT JOIN websites w ON w.id = s.website_id
+        FROM public.field_submissions s
+        LEFT JOIN public.websites w ON w.id = s.website_id
         CROSS JOIN canon c
         WHERE s.ext_user_id = $1
           AND (
@@ -520,8 +527,8 @@ router.get("/provided-data/site", async (req, res, next) => {
     // Risk snapshot (canonical hostname)
     const riskQ = `
       SELECT r.risk_score, r.band, r.phishing_risk, r.data_risk, r.combined_risk, r.updated_at
-      FROM risk_assessments r
-      JOIN websites w ON w.id = r.website_id
+      FROM public.risk_assessments r
+      JOIN public.websites w ON w.id = r.website_id
       WHERE r.ext_user_id = $1
         AND REGEXP_REPLACE(LOWER(w.hostname), '^www\\.', '') = $2
       ORDER BY r.updated_at DESC
@@ -535,5 +542,96 @@ router.get("/provided-data/site", async (req, res, next) => {
     next(e);
   }
 });
+
+/**
+ * GET /api/metrics/risk-analysis?extUserId= OR &ext_user_id=&limit=5
+ * Returns the user's most recent risk assessments (joined to website + latest category).
+ */
+router.get("/risk-analysis", async (req, res, next) => {
+  try {
+    const { extUserId } = resolveUser(req);
+    const limit = Math.max(1, Math.min(Number(req.query.limit || 5) || 5, 100));
+    if (!extUserId) return res.status(400).json({ ok: false, error: "extUserId required" });
+
+    // latest category per website (if site_visits exists)
+    const svCols = await getCols("public", "site_visits").catch(() => new Set());
+    const hasSV = svCols.size > 0;
+    const svTs =
+      (hasSV && svCols.has("last_visited") && `"last_visited"`) ||
+      (hasSV && svCols.has("created_at")   && `"created_at"`)   ||
+      (hasSV && svCols.has("timestamp")    && `"timestamp"`)    ||
+      (hasSV && svCols.has("ts")           && `"ts"`)           ||
+      null;
+
+    const categoryCTE = hasSV && svCols.has("category") && svCols.has("website_id") && svTs ? `
+      , latest_cat AS (
+          SELECT DISTINCT ON (website_id)
+            website_id, category
+          FROM (
+            SELECT website_id, category, ${svTs}::timestamptz AS ts
+            FROM public.site_visits
+            WHERE ext_user_id = $1 AND category IS NOT NULL
+          ) z
+          ORDER BY website_id, ts DESC
+        )
+    ` : `
+      , latest_cat AS (
+          SELECT NULL::bigint AS website_id, NULL::text AS category
+          WHERE FALSE
+        )
+    `;
+
+    const sql = `
+      WITH latest_risk AS (
+        SELECT r.*
+        FROM public.risk_assessments r
+        WHERE r.ext_user_id = $1
+        ORDER BY r.updated_at DESC
+        LIMIT $2
+      )
+      ${categoryCTE}
+      SELECT
+        r.website_id,
+        COALESCE(
+          r.risk_score,
+          ROUND(r.combined_risk * 100),
+          ROUND(r.phishing_risk * 100),
+          0
+        )::int AS risk_score,
+        r.band,
+        r.phishing_risk,
+        r.data_risk,
+        r.combined_risk,
+        r.updated_at,
+        w.hostname,
+        lc.category
+      FROM latest_risk r
+      LEFT JOIN public.websites w ON w.id = r.website_id
+      LEFT JOIN latest_cat lc ON lc.website_id = r.website_id
+      ORDER BY r.updated_at DESC, w.hostname NULLS LAST;
+    `;
+    const { rows } = await dbq(sql, [extUserId, limit]);
+    return res.json({ ok: true, items: rows || [] });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// GET /api/metrics/site-risk/now?hostname=...&extUserId=...
+router.get('/site-risk/now', async (req, res) => {
+  const { hostname, extUserId, userId } = resolveUserAndHost(req); // accept both param styles
+  if (!hostname || (!extUserId && !userId)) return res.status(400).json({ ok:false, error:'INVALID_PARAMS' });
+
+  try {
+    // 1) recompute (will call phishing API; fallback if unreachable)
+    const risk = await computeRisk({ hostname, extUserId, userId, force: true });
+    // 2) upsert risk_assessments and return normalized payload
+    return res.json({ ok:true, hostname, ...risk });
+  } catch (e) {
+    console.error('[site-risk/now]', e);
+    return res.status(500).json({ ok:false, error:'RISK_COMPUTE_FAILED' });
+  }
+});
+
 
 module.exports = router;

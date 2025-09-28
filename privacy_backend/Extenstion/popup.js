@@ -1,216 +1,175 @@
-// ---------- KEEP: your existing toggle logic ----------
+// popup.js — PrivacyPulse (MV3) — production
+
+const API_BASE = "http://localhost:3000"; // change for prod
+
+// ----- toggle -----
 async function getEnabled() {
   const { enabled } = await chrome.storage.local.get("enabled");
-  return enabled === true; // explicit true = ON
+  return enabled === true;
 }
-async function setEnabled(val) {
-  await chrome.storage.local.set({ enabled: !!val });
+async function setEnabled(val) { await chrome.storage.local.set({ enabled: !!val }); }
+function renderToggle(isOn) {
+  const s = document.getElementById("status-text");
+  const b = document.getElementById("toggle-btn");
+  if (!s || !b) return;
+  if (isOn) { s.textContent = "ON"; s.className = "on"; b.textContent = "Turn OFF"; }
+  else { s.textContent = "OFF"; s.className = "off"; b.textContent = "Turn ON"; }
 }
-
-function render(isOn) {
-  const s = document.getElementById("status");
-  const b = document.getElementById("toggle");
-  if (isOn) {
-    s.textContent = "ON"; s.className = "on";
-    b.textContent = "Turn OFF";
-  } else {
-    s.textContent = "OFF"; s.className = "off";
-    b.textContent = "Turn ON";
-  }
-}
-
-document.addEventListener("DOMContentLoaded", async () => {
-  const isOn = await getEnabled();
-  render(isOn);
-  const t = document.getElementById("toggle");
-  if (t) {
-    t.addEventListener("click", async () => {
-      const cur = await getEnabled();
-      await setEnabled(!cur);
-      render(!cur);
-    });
-  }
-});
-
-// ---------- NEW: dashboard-style data display (popup-only) ----------
-const API_BASE = (typeof window !== 'undefined' && window.API_BASE) || "http://localhost:3000";
-
-function ok(res){
-  if(!res.ok) throw new Error(`HTTP ${res.status}`);
-  const ct = res.headers.get('content-type') || '';
-  if(!ct.includes('application/json')) return res.json().catch(()=>({}));
-  return res.json();
-}
-
-function fmtDur(mins){
-  if(mins == null) return '—';
-  const m = Math.max(0, Math.round(mins));
-  const h = Math.floor(m/60);
-  const mm = m%60;
-  return `${h} h ${mm.toString().padStart(2,'0')} mins`;
-}
-
-function setNeedle(pct){
-  const clamped = Math.max(0, Math.min(100, Number(pct)||0));
-  const deg = -90 + (clamped * 1.8); // 0..100 -> -90..+90
-  const needle = document.getElementById('needle');
-  if (needle) needle.style.transform = `rotate(${deg}deg)`;
-  const rp = document.getElementById('riskPct');
-  if (rp) rp.textContent = `${Math.round(clamped)}%`;
-}
-
-function setFieldsGrid(fields){
-  const grid = document.getElementById('fieldsGrid');
-  if (!grid) return;
-  grid.innerHTML = '';
-  const labels = [
-    ['name','Name'],
-    ['email','Email'],
-    ['phone','Phone Number'],
-    ['address','Address'],
-    ['gender','Gender'],
-    ['bank','Bank Details'],
-    ['country','Country'],
-    ['other','XXXXXX']
-  ];
-  const f = fields || {};
-  labels.forEach(([key,label])=>{
-    const div = document.createElement('div');
-    div.className = 'fld';
-    const dot = document.createElement('span');
-    dot.className = 'dot' + (f[key] ? ' on':'');
-    const txt = document.createElement('span');
-    txt.textContent = label;
-    div.appendChild(dot); div.appendChild(txt);
-    grid.appendChild(div);
+function attachToggle() {
+  const btn = document.getElementById("toggle-btn");
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    const cur = await getEnabled(); await setEnabled(!cur); renderToggle(!cur);
   });
 }
 
-async function getIdentity(){
-  const { ext_user_id, token } = await chrome.storage.local.get(['ext_user_id','token']);
-  return { ext_user_id, token };
+// ----- helpers -----
+const stripWWW = (h="") => h.toLowerCase().replace(/^www\./, "");
+function secondsToPretty(seconds=0){
+  const s = Math.max(0, Math.floor(seconds));
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), r = s%60;
+  if (h>0) return `${h}h ${m}m`; if (m>0) return `${m}m ${r}s`; return `${r}s`;
 }
+function authHeaders(token){ const h={"Content-Type":"application/json"}; if(token) h.Authorization=`Bearer ${token}`; return h; }
+async function fetchJSON(url, token){ const res=await fetch(url,{headers:authHeaders(token)}); if(!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); }
 
-async function getActiveUrl(){
-  const [tab] = await chrome.tabs.query({ active:true, currentWindow:true });
-  try{
-    const u = new URL(tab.url);
-    return { hostname: u.hostname, path: u.pathname || '/', url: u.href };
-  }catch{ return { hostname:'', path:'/', url:'' }; }
-}
-
-function authHeaders(token){
-  const h = { 'Content-Type':'application/json' };
-  if(token) h['Authorization'] = `Bearer ${token}`;
-  return h;
-}
-
-// ---- Try aggregated endpoint first, else stitch from others
-async function fetchSiteCard(base, id, token, hostname, path){
-  const url = `${base}/api/metrics/site-card?ext_user_id=${encodeURIComponent(id)}&hostname=${encodeURIComponent(hostname)}&path=${encodeURIComponent(path)}`;
-  const r = await fetch(url, { headers: authHeaders(token) });
-  if(!r.ok) throw new Error('no site-card');
-  const j = await r.json();
-  return {
-    title: j?.data?.title || hostname,
-    minutes: j?.data?.minutes ?? j?.data?.screen_minutes ?? j?.data?.screenTimeMins,
-    fields: j?.data?.fields || j?.data?.fields_detected || {},
-    riskPct: j?.data?.riskPct ?? j?.data?.risk_percent ?? j?.data?.risk,
-    riskText: j?.data?.riskText || j?.data?.risk_label || 'Unknown Risk Level'
-  };
-}
-
-async function fetchStitched(base, id, token, hostname, path){
-  const headers = authHeaders(token);
-  const safeGet = async (u, pick) => {
-    try { const j = await fetch(u, { headers }).then(ok); return pick(j) }
-    catch { return undefined }
-  };
-
-  const minutes = await safeGet(
-    `${base}/api/metrics/screen-time?ext_user_id=${encodeURIComponent(id)}&hostname=${encodeURIComponent(hostname)}`,
-    j => j?.data?.minutes ?? j?.minutes
-  );
-
-  const fields = await safeGet(
-    `${base}/api/metrics/fields?ext_user_id=${encodeURIComponent(id)}&hostname=${encodeURIComponent(hostname)}&path=${encodeURIComponent(path)}`,
-    j => j?.data?.fields || j?.fields
-  );
-
-  const risk = await safeGet(
-    `${base}/api/risk/site?ext_user_id=${encodeURIComponent(id)}&hostname=${encodeURIComponent(hostname)}`,
-    j => ({ pct: j?.data?.riskPct ?? j?.riskPct ?? j?.risk, label: j?.data?.label || j?.label })
-  );
-
-  return {
-    title: hostname,
-    minutes,
-    fields,
-    riskPct: risk?.pct,
-    riskText: risk?.label || 'Unknown Risk Level'
-  };
-}
-
-(async function main(){
-  if (document.readyState === 'loading') {
-    await new Promise(r => document.addEventListener('DOMContentLoaded', r, { once:true }));
+// risk render
+function applyRisk(score=0){
+  const n = Math.max(0, Math.min(100, Number(score)||0));
+  let band = "Unknown";
+  if (n>=80) band="Critical"; else if (n>=60) band="High"; else if (n>=40) band="Moderate"; else if (n>=20) band="Low"; else if (n>=1) band="Safe";
+  const pctEl=document.getElementById("risk-percent");
+  const lblEl=document.getElementById("risk-label");
+  const gauge=document.getElementById("risk-gauge");
+  if (pctEl) pctEl.textContent = `${Math.round(n)}%`;
+  if (lblEl) lblEl.textContent = `${band} Risk Level`;
+  if (gauge) {
+    gauge.setAttribute("data-risk", band.toLowerCase());
+    const deg=(n/100)*180;
+    gauge.style.background=`conic-gradient(currentColor 0deg ${deg}deg, #f0f0f0 ${deg}deg 180deg)`;
   }
+}
 
-  const els = {
-    title: document.getElementById('siteTitle'),
-    time:  document.getElementById('screenTime'),
-    riskT: document.getElementById('riskText')
+// provided-data pills
+const PROVIDED_KEYS = {
+  name:["submitted_name"], email:["submitted_email"],
+  phone:["submitted_phone","submitted_phone_number"],
+  address:["submitted_address"], gender:["submitted_gender"],
+  bank:["submitted_bank","submitted_card","submitted_card_details","submitted_bank_details"],
+  country:["submitted_country"], other:["submitted_other","submitted_age"]
+};
+function paintProvidedPills(flags={}){
+  const grid=document.getElementById("provided-pill-grid"); if(!grid) return;
+  for(const pill of Array.from(grid.querySelectorAll(".pill"))){
+    const key=pill.getAttribute("data-field");
+    const keys=PROVIDED_KEYS[key]||[];
+    pill.classList.toggle("on", keys.some(k=>Boolean(flags[k])));
+  }
+}
+
+// map your API responses
+function pickRiskScore(a){
+  if (!a || typeof a!=="object") return 0;
+  if (Number.isFinite(a.score)) return Number(a.score);                 // /metrics/site-risk
+  if (a.risk && Number.isFinite(a.risk.risk_score)) return Number(a.risk.risk_score); // from provided-data/site
+  if (Number.isFinite(a.risk_score)) return Number(a.risk_score);
+  if (Number.isFinite(a.combined_risk)) return Number(a.combined_risk);
+  return 0;
+}
+function pickScreenSeconds(a){
+  if (!a || typeof a!=="object") return null;
+  if (a.screen_time_sum!=null) return Number(a.screen_time_sum);        // provided-data/site
+  if (a.screen_time_seconds!=null) return Number(a.screen_time_seconds); // if you add it to site-risk later
+  if (a.data?.screen_time_seconds!=null) return Number(a.data.screen_time_seconds);
+  return null;
+}
+function extractFlags(obj){
+  if (!obj || typeof obj!=="object") return {};
+  const u = obj.fields_union || obj.data?.fields_union || {};
+  return {
+    submitted_name: !!u.name,
+    submitted_email: !!u.email,
+    submitted_phone: !!u.phone,
+    submitted_address: !!u.address,
+    submitted_bank: !!u.card,     // Card Details pill
+    submitted_gender: !!u.gender,
+    submitted_country: !!u.country,
+    submitted_other: !!u.age      // Age pill uses "other"
   };
+}
 
-  const [{ ext_user_id, token }, { hostname, path }] = await Promise.all([getIdentity(), getActiveUrl()]);
-  if (els.title) els.title.textContent = hostname || 'Unknown site';
+// identity + active tab
+async function getIdentity(){
+  const { ext_user_id, auth_token, token, dashboard_url } =
+    await chrome.storage.local.get(["ext_user_id","auth_token","token","dashboard_url"]);
+  return { ext_user_id, token: auth_token || token, dashboard_url };
+}
+async function getActiveTabInfo(){
+  const wins = await chrome.windows.getAll({ populate:true, windowTypes:["normal"] });
+  let tab=null;
+  const focused=wins.find(w=>w.focused);
+  if (focused) tab=focused.tabs.find(t=>t.active)||null;
+  if (!tab) for (const w of wins){ const a=w.tabs.find(t=>t.active); if (a){ tab=a; break; } }
+  if (!tab) { const all=await chrome.tabs.query({ windowType:"normal" }); all.sort((a,b)=>(b.lastAccessed??0)-(a.lastAccessed??0)); tab=all[0]||null; }
+  const raw=tab?.url||tab?.pendingUrl||"";
+  try{
+    const u=new URL(raw);
+    if (!u.hostname || u.protocol.startsWith("chrome")) return { hostname:"", path:"/", full:raw };
+    return { hostname: stripWWW(u.hostname), path: u.pathname||"/", full: raw };
+  }catch{ return { hostname:"", path:"/", full: raw }; }
+}
 
-  if(!ext_user_id || !hostname){
-    setFieldsGrid({});
-    setNeedle(0);
-    if (els.time)  els.time.textContent = '—';
-    if (els.riskT) els.riskT.textContent = 'Unknown Risk Level';
+// ----- main -----
+async function init(){
+  renderToggle(await getEnabled());
+
+  const hostLabel=document.getElementById("host-label");
+  const timeEl   =document.getElementById("screen-time");
+  const goBtn    =document.getElementById("go-dashboard");
+
+  const [{ ext_user_id, token, dashboard_url }, { hostname }] =
+    await Promise.all([getIdentity(), getActiveTabInfo()]);
+
+  if (hostLabel) hostLabel.textContent = hostname || "Unknown site";
+  if (goBtn && dashboard_url) goBtn.href = dashboard_url;
+
+  if (!ext_user_id || !hostname){
+    if (timeEl) timeEl.textContent="—";
+    applyRisk(0); paintProvidedPills({});
     return;
   }
 
-  let card;
-  try { card = await fetchSiteCard(API_BASE, ext_user_id, token, hostname, path); }
-  catch { card = await fetchStitched(API_BASE, ext_user_id, token, hostname, path); }
+  const params=new URLSearchParams({ hostname, extUserId: ext_user_id, ext_user_id: ext_user_id });
+  const siteRiskURL = `${API_BASE}/api/metrics/site-risk?${params}`;
+  const providedURL = `${API_BASE}/api/metrics/provided-data/site?${params}`;
 
-  if (els.title) els.title.textContent = card.title || hostname;
-  if (els.time)  els.time.textContent = fmtDur(card.minutes);
-  setFieldsGrid(card.fields);
-  setNeedle(card.riskPct ?? 0);
-  if (els.riskT) els.riskT.textContent = card.riskText || 'Unknown Risk Level';
-})();
+  let riskScore=0, screenSec=null, flags={};
 
-// ----- Go to Dashboard button (reuse existing logged-in tab if present) -----
-document.addEventListener('DOMContentLoaded', () => {
-  const btn = document.getElementById('dashboardLink');
-  if (!btn) return;
+  try{
+    const riskJson = await fetchJSON(siteRiskURL, token).catch(()=>null);
+    if (riskJson) {
+      riskScore = pickRiskScore(riskJson);
+      // some builds only return band/score; screen time may not be here
+      screenSec = pickScreenSeconds(riskJson);
+    }
 
-  btn.addEventListener('click', async (e) => {
-    e.preventDefault();
+    const provJson = await fetchJSON(providedURL, token).catch(()=>null);
+    if (provJson) {
+      // prefer risk from site-risk; else use nested risk here
+      if (!riskScore) riskScore = pickRiskScore(provJson);
+      if (screenSec==null) screenSec = pickScreenSeconds(provJson);
+      flags = extractFlags(provJson);
+    }
+  }catch(e){
+    // soft fail — leave defaults
+  }
 
-    const [{ ext_user_id }, { hostname }] = await Promise.all([getIdentity(), getActiveUrl()]);
-    const dashBase = 'http://localhost:5173';                // change if your dev base differs
-    const targetPath = `/site?host=${encodeURIComponent(hostname)}&uid=${encodeURIComponent(ext_user_id || '')}`;
-    const targetUrl  = `${dashBase}${targetPath}`;
+  if (timeEl) timeEl.textContent = screenSec!=null ? secondsToPretty(screenSec) : "—";
+  applyRisk(riskScore);
+  paintProvidedPills(flags);
+}
 
-    // Find an existing dashboard tab first (already logged in)
-    chrome.tabs.query({ url: `${dashBase}/*` }, async (tabs) => {
-      if (tabs && tabs.length > 0) {
-        const t = tabs[0];
-        await chrome.tabs.update(t.id, { active: true });
-        // Ask the content script in that tab to navigate internally
-        chrome.tabs.sendMessage(t.id, { type: 'PP_NAV', path: targetPath }, () => {
-          // If no content script or messaging failed, hard-navigate
-          if (chrome.runtime.lastError) chrome.tabs.update(t.id, { url: targetUrl });
-        });
-      } else {
-        // No existing tab → open directly
-        chrome.tabs.create({ url: targetUrl });
-      }
-    });
-  });
+document.addEventListener("DOMContentLoaded", () => {
+  attachToggle();
+  init();
 });

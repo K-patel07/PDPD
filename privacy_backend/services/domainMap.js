@@ -11,6 +11,16 @@ module.exports = {
   'instagram.com': 'Social Media',
   'facebook.com': 'Social Media',
   'tiktok.com': 'Social Media',
+  'whatsapp.com': 'Social Media',
+  'telegram.org': 'Social Media',
+  'viber.com': 'Social Media',
+  'wechat.com': 'Social Media',
+  'messenger.com': 'Social Media',
+  'bereal.com': 'Social Media',
+
+
+
+
 
   // --- Entertainment ---
   'netflix.com': 'Entertainment',
@@ -18,17 +28,38 @@ module.exports = {
   'youtube.com': 'Entertainment',
   'disneyplus.com': 'Entertainment',
   'primevideo.com': 'Entertainment',
+  'hoyts.com.au': 'Entertainment',
+  'music.apple.com': 'Entertainment',
+
+
 
   // --- News ---
   'bbc.com': 'News',
   'cnn.com': 'News',
   'nytimes.com': 'News',
   'foxnews.com': 'News',
+  'abc.net.au': 'News',
+  '7news.com.au': 'News',
+  '9news.com.au': 'News',
+  'aljazeera.com': 'News',
+  'theage.com.au': 'News',
+  'theaustralian.com.au': 'News',
+  'afr.com': 'News',
+
+
+
 
   // --- Sports ---
   'espn.com': 'Sports',
   'livescore.com': 'Sports',
   'fifa.com': 'Sports',
+  'stan.com.au': 'Sports',
+  'foxsports.com.au': 'Sports',
+  'codesports.com.au': 'Sports',
+  'kayosports.com.au': 'Sports',
+  'skysports.com': 'Sports',
+
+
 
   // --- Productivity ---
   'zoom.us': 'Productivity',
@@ -38,6 +69,14 @@ module.exports = {
   'drive.google.com': 'Productivity',
   'docs.google.com': 'Productivity',
   'figma.com': 'Productivity',
+  'chatgpt.com': 'Productivity',
+  'perplexity.ai': 'Productivity',
+  'claude.ai': 'Productivity',
+  'discord.com': 'Productivity',
+  'zoom.com': 'Productivity',
+  'canva.com':'Productivity',
+
+
 
   // --- E-commerce ---
   'amazon.com': 'E-commerce',
@@ -50,6 +89,22 @@ module.exports = {
   'target.com': 'E-commerce',
   'woolworths.com.au': 'E-commerce',
   'coles.com.au': 'E-commerce',
+  'aldi.com.au': 'E-commerce',
+  'm.shein.com': 'E-commerce',
+  'au.shein.com': 'E-commerce',
+  'temu.com': 'E-commerce',
+  'shopify.com': 'E-commerce',
+  'jbhifi.com.au': 'E-commerce',
+  'rakuten.com': 'E-commerce',
+  'aliexpress.com': 'E-commerce',
+  'flipkart.com': 'E-commerce',
+
+
+
+
+
+
+
 
   // --- Education ---
   'coursera.org': 'Education',
@@ -58,7 +113,26 @@ module.exports = {
   'duolingo.com': 'Education',
   'codecademy.com': 'Education',
   'ams.mit.au': 'Education',   // from your doc
-   'stealthwriter.ai': "Education",
+  'w3schools.com': 'Education',
+  'au.cengage.com': 'Education',
+  'scholar.google.com': 'Education',
+  'scholar.google.com.au': 'Education',
+  'monash.edu': 'Education',
+  'monash.com': 'Education',
+  'latrobe.edu.au': 'Education',
+  'deakin.edu.au': 'Education',
+  'swinburne.edu.au': 'Education',
+  'pluralsight.com': 'Education',
+  'cisco.com': 'Education',
+  'ccna.com.au': 'Education',
+
+
+
+
+
+
+
+
 
 
   // --- Finance ---
@@ -71,6 +145,14 @@ module.exports = {
   'anz.com': 'Finance',
   'nab.com.au': 'Finance',
   'westpac.com.au': 'Finance',
+  'klarna.com': 'Finance',
+  'afterpay.com': 'Finance',
+  'zip.co.': 'Finance',
+  'xero.com': 'Finance',
+  'latitudefinancial.com.au': 'Finance',
+
+
+
 
   // --- Health ---
   'fitbit.com': 'Health',
@@ -78,6 +160,16 @@ module.exports = {
   'calm.com': 'Health',
   'nike.com': 'Health',        // Nike Training Club
   'healthline.com': 'Health',
+  'fitnessfirst.com.au': 'Health',
+  'revofitness.com.au': 'Health',
+  'snapfitness.com': 'Health',
+  'anytimefitness.com.au': 'Health',
+  'thermh.org.au': 'Health',
+  'svhm.org.au': 'Health',
+
+
+
+
 
   // --- Travel ---
   'airbnb.com': 'Travel',
@@ -85,4 +177,18 @@ module.exports = {
   'uber.com': 'Travel',
   'trivago.com': 'Travel',
   'doordash.com': 'Travel',
+  '13cabs.com.au': 'Travel',
+  'web.didiglobal.com': 'Travel',
+  'transport.vic.gov.au': 'Travel',
+  'vline.com.au': 'Travel',
+  'metrotrains.com.au': 'Travel',
+  'qantas.com': 'Travel',
+  'flightcentre.com.au': 'Travel',
+  'booking.com': 'Travel',
+  'virginaustralia.com': 'Travel',
+
+
+
+
+  
 };

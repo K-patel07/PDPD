@@ -2,7 +2,7 @@
 // Visits + live screen-time + submit enrichment
 // Works with content.js that sends: PAGE_VISIT and FORM_SUBMIT
 
-const API_BASE = "http://localhost:3000";
+const API_BASE = "http://localhost:3000"; // must match popup
 
 /* =========================
    CONFIG
@@ -263,6 +263,15 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   }
 });
 
+async function onAuthSuccess(data) {
+  // data should contain { token, ext_user_id, dashboard_url? }
+  await chrome.storage.local.set({
+    auth_token: data.token,
+    ext_user_id: data.ext_user_id,
+    dashboard_url: "https://your-dashboard.example", // optional
+    popup_status: "ON"
+  });
+}
 /* =========================
    MESSAGE HANDLERS
 ========================= */

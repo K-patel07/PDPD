@@ -26,34 +26,41 @@ import logoutLight from "../assets/sidebar-icons/light - logout.svg";
 
 /**
  * Sidebar
- * - Updated with new branding (two-line PrivacyPulse with logo space)
- * - Clean navigation without dashed borders
- * - Hover effects with shadows
+ * - Uses /logo.png from public/ inside .logo box (fits your existing CSS)
+ * - Dark mode swaps icons with pick(normal, light)
  */
 export default function Sidebar() {
   const { darkMode } = useTheme();
   const pick = (normal, light) => (darkMode ? light : normal);
 
-  const Icon = ({ src }) => (
+  const Icon = ({ src, label }) => (
     <span className="icon-container" aria-hidden="true">
       <img
         src={src}
         alt=""
-        style={{ 
-          width: "20px", 
-          height: "20px", 
-          objectFit: "contain", 
-          display: "block" 
-        }}
+        width={20}
+        height={20}
+        style={{ objectFit: "contain", display: "block" }}
+        draggable={false}
       />
     </span>
   );
 
   return (
-    <aside id="sidebar" aria-label="Primary">
-      {/* Updated Brand with logo space and two-line text */}
-      <Link to="/" className="brand" aria-label="PrivacyPulse">
-        <div className="logo">PP</div>
+    <aside id="sidebar" aria-label="Primary navigation">
+      {/* Brand */}
+      <Link to="/" className="brand" aria-label="PrivacyPulse home">
+        <div className="logo">
+          {/* Option A: logo file in public/ */}
+          <img
+            src="/logo.png"
+            alt="PrivacyPulse"
+            width={32}
+            height={32}
+            style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+            draggable={false}
+          />
+        </div>
         <div className="brand-text">
           <div className="line1">Privacy</div>
           <div className="line2">Pulse</div>
@@ -61,7 +68,7 @@ export default function Sidebar() {
       </Link>
 
       {/* Main nav */}
-      <nav>
+      <nav role="navigation" aria-label="Main">
         <ul>
           <li>
             <Link to="/" className="nav-row" aria-label="Home">

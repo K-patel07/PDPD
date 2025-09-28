@@ -5,15 +5,16 @@ const router = express.Router();
 const Joi = require("joi");
 const jwt = require("jsonwebtoken");
 const psl = require("psl");
-
 const db = require("../db");
+
 const { detectCategoryForVisit } = require("../services/categorizer");
 const { classifyPhishing } = require("../services/phishingModel");
-const computeRisk = require("../services/riskScorer");
+const computeRisk = require("../services/riskScorer"); // returns { phishing_risk,data_risk,combined_risk,risk_score,band }
 const { isTracker } = require("../services/blocklist");
 
 /* ----------------------------- Config ------------------------------ */
 const SESSION_TIMEOUT_MINUTES = 30;
+const DEV_FALLBACK_EXT = "ext-7edda547-937d-442a-8fb3-65846e5602c9"; // dev only
 const BLOCKED_HOSTNAMES = [
   "google.com",
   "gstatic.com",
@@ -32,8 +33,7 @@ function normalizeHostname(input) {
     if (h.includes("://")) h = new URL(h).hostname;
     h = h.toLowerCase().trim();
     if (h.startsWith("www.")) h = h.slice(4);
-    if (h === "localhost") return "localhost"; // dev
-
+    if (h === "localhost") return "localhost"; // allow dev
     const parsed = psl.parse(h);
     if (!parsed.domain || !parsed.domain.includes(".")) return null;
     return parsed.domain;
@@ -46,9 +46,12 @@ function isBlocked(hostname) {
   if (isTracker(hostname)) return true;
   return BLOCKED_HOSTNAMES.some((b) => hostname.endsWith(b));
 }
-function safeStr(v, fb = "") {
-  return typeof v === "string" ? v : fb;
-}
+const safeStr = (v, fb = "") => (typeof v === "string" ? v : fb);
+const clampNum = (v, min, max, dflt = 0) => {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return dflt;
+  return Math.min(max, Math.max(min, n));
+};
 
 async function getOrCreateWebsiteId(hostname) {
   const host = String(hostname || "").toLowerCase();
@@ -69,7 +72,7 @@ async function getOrCreateWebsiteId(hostname) {
 async function getOrCreateUserIdByExt(extUserId) {
   if (!extUserId) return null;
   const sel = await db.query(
-    `SELECT id FROM public.users WHERE ext_user_id = $1 LIMIT 1`,
+    `SELECT id FROM public.users WHERE ext_user_id = $1 LIMIT 1;`,
     [extUserId]
   );
   if (sel.rowCount) return sel.rows[0].id;
@@ -86,7 +89,7 @@ async function getOrCreateUserIdByExt(extUserId) {
   return ins.rows[0].id;
 }
 
-/* ---------- discover available submitted_* columns (auto-adapts to DB) ---------- */
+/* ---------- discover available submitted_* columns (auto-adapts) --- */
 const SUBMITTED_COLS = [
   "submitted_name",
   "submitted_email",
@@ -112,64 +115,70 @@ async function getFieldSubmissionsCols() {
 
 /* ----------------------------- Schemas ----------------------------- */
 const visitSchema = Joi.object({
-  hostname: Joi.string().min(1).required(),
+  hostname: Joi.string().min(1).required(), // may be a hostname or full URL
   main_domain: Joi.string().allow("", null).default(null),
   path: Joi.string().allow("", null).default(""),
   title: Joi.string().allow("", null).default(""),
   category: Joi.string().allow("", null).default("Unknown"),
   category_confidence: Joi.number().allow(null).default(null),
   category_method: Joi.string().allow("", null).default(null),
-  fields_detected: Joi.object().unknown(true).default({}),
+  fields_detected: Joi.object().unknown(true).default({}), // booleans about seen fields
   last_input_time: Joi.alternatives(Joi.date(), Joi.string()).allow(null),
   screen_time_seconds: Joi.number().integer().min(0).default(0),
   ext_user_id: Joi.string().allow("", null).default(null),
-  event_type: Joi.string().allow("", null).default("visit"),
-});
+  event_type: Joi.string().allow("", null).default("visit"), // 'visit' | 'visit_end'
+}).unknown(false);
 
 /* -------------------------------- VISIT ---------------------------- */
 router.post("/visit", async (req, res) => {
   try {
+    // 1) Validate
     const { error, value } = visitSchema.validate(req.body || {}, { stripUnknown: true });
     if (error) {
-      return res.status(400).json({ ok: false, error: error.details?.[0]?.message });
+      return res.status(400).json({ ok: false, error: error.details?.[0]?.message || "Invalid payload" });
     }
 
-    const rawHost = value.hostname.startsWith("http") ? value.hostname : `https://${value.hostname}`;
+    // 2) Host normalization (accepts full URL)
+    const rawHost = value.hostname?.startsWith("http") ? value.hostname : `https://${value.hostname}`;
     const hostname = normalizeHostname(rawHost);
     if (!hostname) return res.status(400).json({ ok: false, error: "Invalid hostname" });
 
-    const mainDomain = normalizeHostname(value.main_domain || rawHost);
-    if (mainDomain && hostname !== mainDomain) return res.sendStatus(204); // third-party
+    // Ignore third-party if main_domain present and differs
+    const mainCandidate = safeStr(value.main_domain, "") || rawHost;
+    const mainDomain = normalizeHostname(mainCandidate);
+    if (mainDomain && hostname !== mainDomain) return res.sendStatus(204);
 
+    // Ignore trackers/blocked hosts
     if (isBlocked(hostname)) return res.sendStatus(204);
 
-    // resolve ext_user_id
+    // 3) ext_user_id (support Bearer fallback) — dev fallback allowed
     let ext_user_id = safeStr(value.ext_user_id, "");
     if (!ext_user_id) {
-      const auth = req.headers.authorization || "";
+      const auth = safeStr(req.headers.authorization, "");
       const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
       if (token) {
         try {
           const payload = jwt.verify(token, process.env.JWT_SECRET || "dev-secret");
           if (payload?.userId) {
             const { rows } = await db.query(
-              "SELECT ext_user_id FROM public.users WHERE id=$1 LIMIT 1",
+              "SELECT ext_user_id FROM public.users WHERE id = $1 LIMIT 1;",
               [payload.userId]
             );
-            ext_user_id = rows?.[0]?.ext_user_id || "";
+            ext_user_id = safeStr(rows?.[0]?.ext_user_id, "");
           }
-        } catch {}
+        } catch { /* ignore */ }
       }
     }
-    if (!ext_user_id) ext_user_id = "ext-7edda547-937d-442a-8fb3-65846e5602c9"; // dev
+    if (!ext_user_id) ext_user_id = DEV_FALLBACK_EXT; // dev only
 
     await getOrCreateUserIdByExt(ext_user_id);
     const website_id = await getOrCreateWebsiteId(hostname);
 
-    // category
-    let category = safeStr(value.category, "").trim() || "Unknown";
+    // 4) Category enrichment (best-effort)
+    let category = safeStr(value.category, "") || "Unknown";
     let category_confidence = value.category_confidence ?? null;
     let category_method = safeStr(value.category_method, null);
+
     if (category.toLowerCase() === "unknown") {
       try {
         const det = await detectCategoryForVisit({
@@ -180,14 +189,17 @@ router.post("/visit", async (req, res) => {
         category = det?.category || "Unknown";
         category_confidence = det?.confidence ?? null;
         category_method = det?.method ?? null;
-      } catch {}
+      } catch { /* keep Unknown */ }
     }
 
-    const incomingTime = Number(value.screen_time_seconds) || 0;
-    const last_input_time = value.last_input_time
-      ? new Date(value.last_input_time).toISOString()
-      : null;
+    // 5) Timings & inputs
+    const path = safeStr(value.path, "");
+    const title = safeStr(value.title, "");
+    const incomingTime = clampNum(value.screen_time_seconds, 0, 24 * 3600, 0);
+    const last_input_time = value.last_input_time ? new Date(value.last_input_time).toISOString() : null;
+    const fields_detected = value && typeof value.fields_detected === "object" ? value.fields_detected : {};
 
+    // 6) End-of-visit aggregation
     if (value.event_type === "visit_end") {
       await db.query(
         `
@@ -211,17 +223,17 @@ router.post("/visit", async (req, res) => {
           category_confidence = COALESCE(EXCLUDED.category_confidence, site_visits.category_confidence),
           category_method     = COALESCE(EXCLUDED.category_method, site_visits.category_method),
           fields_detected     = COALESCE(EXCLUDED.fields_detected, site_visits.fields_detected);
-      `,
+        `,
         [
           website_id,
           ext_user_id,
           hostname,
-          safeStr(value.path, ""),
-          safeStr(value.title, ""),
+          path,
+          title,
           category,
           category_confidence,
           category_method,
-          value.fields_detected || {},
+          fields_detected,
           incomingTime,
           last_input_time,
         ]
@@ -229,16 +241,22 @@ router.post("/visit", async (req, res) => {
       return res.sendStatus(204);
     }
 
+    // 7) Merge into active session if last visit < SESSION_TIMEOUT_MINUTES
     const dup = await db.query(
-      `SELECT id, last_visited FROM public.site_visits
-       WHERE ext_user_id=$1 AND hostname=$2
-       ORDER BY last_visited DESC LIMIT 1;`,
+      `
+      SELECT id, last_visited
+        FROM public.site_visits
+       WHERE ext_user_id = $1 AND hostname = $2
+       ORDER BY last_visited DESC
+       LIMIT 1;
+      `,
       [ext_user_id, hostname]
     );
 
     if (dup.rowCount) {
-      const mins = (Date.now() - new Date(dup.rows[0].last_visited).getTime()) / 60000;
-      if (mins < SESSION_TIMEOUT_MINUTES) {
+      const last = new Date(dup.rows[0].last_visited).getTime();
+      const mins = (Date.now() - last) / 60000;
+      if (mins < Number(SESSION_TIMEOUT_MINUTES || 30)) {
         await db.query(
           `
           UPDATE public.site_visits
@@ -250,13 +268,13 @@ router.post("/visit", async (req, res) => {
                  category            = COALESCE($5, site_visits.category),
                  category_confidence = COALESCE($6, site_visits.category_confidence),
                  category_method     = COALESCE($7, site_visits.category_method)
-           WHERE ext_user_id=$8 AND hostname=$9;
-        `,
+           WHERE ext_user_id = $8 AND hostname = $9;
+          `,
           [
             incomingTime,
             last_input_time,
-            safeStr(value.path, ""),
-            safeStr(value.title, ""),
+            path,
+            title,
             category,
             category_confidence,
             category_method,
@@ -264,62 +282,107 @@ router.post("/visit", async (req, res) => {
             hostname,
           ]
         );
-        return res.sendStatus(204);
+        // risk update is best-effort below (continue)
+      } else {
+        // 8) New/expired session upsert
+        await db.query(
+          `
+          INSERT INTO public.site_visits
+            (website_id, ext_user_id, hostname, path, title,
+             category, category_confidence, category_method,
+             event_type, fields_detected, screen_time_seconds,
+             last_input_time, created_at, last_visited, visit_count)
+          VALUES
+            ($1,$2,$3,$4,$5,$6,$7,$8,
+             'visit',$9::jsonb,$10,
+             $11, NOW(), NOW(), 1)
+          ON CONFLICT (ext_user_id, hostname)
+          DO UPDATE SET
+            visit_count         = CASE
+                                    WHEN NOW() - site_visits.last_visited > INTERVAL '30 minutes'
+                                      THEN site_visits.visit_count + 1
+                                      ELSE site_visits.visit_count
+                                  END,
+            screen_time_seconds = site_visits.screen_time_seconds + EXCLUDED.screen_time_seconds,
+            last_visited        = NOW(),
+            last_input_time     = COALESCE(EXCLUDED.last_input_time, site_visits.last_input_time),
+            path                = EXCLUDED.path,
+            title               = EXCLUDED.title,
+            category            = COALESCE(EXCLUDED.category, site_visits.category),
+            category_confidence = COALESCE(EXCLUDED.category_confidence, site_visits.category_confidence),
+            category_method     = COALESCE(EXCLUDED.category_method, site_visits.category_method),
+            fields_detected     = COALESCE(EXCLUDED.fields_detected, site_visits.fields_detected);
+          `,
+          [
+            website_id,
+            ext_user_id,
+            hostname,
+            path,
+            title,
+            category,
+            category_confidence,
+            category_method,
+            fields_detected,
+            incomingTime,
+            last_input_time,
+          ]
+        );
       }
+    } else {
+      // First record for this host/user
+      await db.query(
+        `
+        INSERT INTO public.site_visits
+          (website_id, ext_user_id, hostname, path, title,
+           category, category_confidence, category_method,
+           event_type, fields_detected, screen_time_seconds,
+           last_input_time, created_at, last_visited, visit_count)
+        VALUES
+          ($1,$2,$3,$4,$5,$6,$7,$8,
+           'visit',$9::jsonb,$10,
+           $11, NOW(), NOW(), 1)
+        ON CONFLICT (ext_user_id, hostname)
+        DO UPDATE SET
+          screen_time_seconds = site_visits.screen_time_seconds + EXCLUDED.screen_time_seconds,
+          last_visited        = NOW(),
+          last_input_time     = COALESCE(EXCLUDED.last_input_time, site_visits.last_input_time),
+          path                = EXCLUDED.path,
+          title               = EXCLUDED.title,
+          category            = COALESCE(EXCLUDED.category, site_visits.category),
+          category_confidence = COALESCE(EXCLUDED.category_confidence, site_visits.category_confidence),
+          category_method     = COALESCE(EXCLUDED.category_method, site_visits.category_method),
+          fields_detected     = COALESCE(EXCLUDED.fields_detected, site_visits.fields_detected);
+        `,
+        [
+          website_id,
+          ext_user_id,
+          hostname,
+          path,
+          title,
+          category,
+          category_confidence,
+          category_method,
+          fields_detected,
+          incomingTime,
+          last_input_time,
+        ]
+      );
     }
 
-    await db.query(
-      `
-      INSERT INTO public.site_visits
-        (website_id, ext_user_id, hostname, path, title,
-         category, category_confidence, category_method,
-         event_type, fields_detected, screen_time_seconds,
-         last_input_time, created_at, last_visited, visit_count)
-      VALUES
-        ($1,$2,$3,$4,$5,$6,$7,$8,
-         'visit',$9::jsonb,$10,
-         $11, NOW(), NOW(), 1)
-      ON CONFLICT (ext_user_id, hostname)
-      DO UPDATE SET
-        visit_count         = CASE
-                                WHEN NOW() - site_visits.last_visited > INTERVAL '30 minutes'
-                                THEN site_visits.visit_count + 1
-                                ELSE site_visits.visit_count
-                              END,
-        screen_time_seconds = site_visits.screen_time_seconds + EXCLUDED.screen_time_seconds,
-        last_visited        = NOW(),
-        last_input_time     = COALESCE(EXCLUDED.last_input_time, site_visits.last_input_time),
-        path                = EXCLUDED.path,
-        title               = EXCLUDED.title,
-        category            = COALESCE(EXCLUDED.category, site_visits.category),
-        category_confidence = COALESCE(EXCLUDED.category_confidence, site_visits.category_confidence),
-        category_method     = COALESCE(EXCLUDED.category_method, site_visits.category_method),
-        fields_detected     = COALESCE(EXCLUDED.fields_detected, site_visits.fields_detected);
-    `,
-      [
-        website_id,
-        ext_user_id,
-        hostname,
-        safeStr(value.path, ""),
-        safeStr(value.title, ""),
-        category,
-        category_confidence,
-        category_method,
-        value.fields_detected || {},
-        incomingTime,
-        last_input_time,
-      ]
-    );
-
-    // risk upsert (non-fatal)
+    /* -------- Risk upsert (best-effort; never blocks main flow) -------- */
     try {
-      const phishingRes = await classifyPhishing(hostname);
-      const phishingRisk = Number(phishingRes?.phishingScore ?? phishingRes?.score ?? 0) || 0;
-      const fields =
-        value?.fields_detected && typeof value.fields_detected === "object"
-          ? value.fields_detected
-          : {};
-      const risk = computeRisk(fields, phishingRisk, hostname);
+      const ph = await classifyPhishing(hostname);
+      const phishingRisk = clampNum(ph?.phishingScore ?? ph?.score ?? 0, 0, 1, 0);
+
+      const riskRaw = (await computeRisk(fields_detected || {}, phishingRisk, hostname)) || {};
+      const payload = {
+        phishing_risk: clampNum(riskRaw.phishing_risk ?? phishingRisk, 0, 1, 0),
+        data_risk:     clampNum(riskRaw.data_risk ?? 0, 0, 1, 0),
+        combined_risk: clampNum(riskRaw.combined_risk ?? ((phishingRisk + (riskRaw.data_risk ?? 0)) / 2), 0, 1, 0),
+        risk_score:    clampNum(riskRaw.risk_score ?? riskRaw.combined_risk ?? phishingRisk, 0, 1, 0),
+        band:          String(riskRaw.band || "Unknown"),
+      };
+
       await db.query(
         `
         INSERT INTO public.risk_assessments
@@ -333,110 +396,110 @@ router.post("/visit", async (req, res) => {
           risk_score    = EXCLUDED.risk_score,
           band          = EXCLUDED.band,
           updated_at    = NOW();
-      `,
+        `,
         [
           website_id,
           ext_user_id,
-          risk.phishing_risk || 0,
-          risk.data_risk || 0,
-          risk.combined_risk || 0,
-          risk.risk_score || 0,
-          risk.band || "Unknown",
+          payload.phishing_risk,
+          payload.data_risk,
+          payload.combined_risk,
+          payload.risk_score,
+          payload.band,
         ]
       );
     } catch (e) {
-      console.warn("[visit -> risk] non-fatal error:", e?.message || e);
+      console.warn("[visit -> risk] non-fatal:", e?.message || e);
     }
 
     return res.sendStatus(204);
   } catch (err) {
-    console.error("[visit] ERROR", err);
+    console.error("[visit] ERROR:", err);
     return res.status(500).json({ ok: false, error: "Server error" });
   }
 });
 
 /* -------------------------------- SUBMIT --------------------------- */
+/**
+ * We accept three shapes:
+ *  A) explicit submitted_* booleans
+ *  B) fields_detected: { name,email,phone,card,address,age,gender,country }
+ *  C) fields_union:    { ...same keys... }
+ */
 const KEYS = ["name", "email", "phone", "card", "address", "age", "gender", "country"];
 
-const submitA = Joi.object({
-  ext_user_id: Joi.string().allow(null, ""),
-  hostname: Joi.string().required(),
+const submitSchema = Joi.object({
+  // accept both spellings in body; either is fine
+  extUserId: Joi.string().allow("", null),
+  ext_user_id: Joi.string().allow("", null),
+
+  hostname: Joi.string().required(), // may be URL or host
   path: Joi.string().allow("", null),
   title: Joi.string().allow("", null),
+
   last_input_time: Joi.alternatives(Joi.date().iso(), Joi.string()).allow(null),
   screen_time_seconds: Joi.number().integer().min(0).default(0),
   event_type: Joi.string().allow("", null).default("submit"),
   trigger: Joi.string().allow("", null),
 
-  submitted_name: Joi.boolean().default(false),
-  submitted_email: Joi.boolean().default(false),
-  submitted_phone: Joi.boolean().default(false),
-  submitted_card: Joi.boolean().default(false),
-  submitted_address: Joi.boolean().default(false),
-  submitted_age: Joi.boolean().default(false),
-  submitted_gender: Joi.boolean().default(false),
-  submitted_country: Joi.boolean().default(false),
+  // A) explicit flags
+  submitted_name: Joi.boolean(),
+  submitted_email: Joi.boolean(),
+  submitted_phone: Joi.boolean(),
+  submitted_card: Joi.boolean(),
+  submitted_address: Joi.boolean(),
+  submitted_age: Joi.boolean(),
+  submitted_gender: Joi.boolean(),
+  submitted_country: Joi.boolean(),
 
+  // B) fields_detected
+  fields_detected: Joi.object(Object.fromEntries(KEYS.map(k => [k, Joi.boolean()]))),
+
+  // C) fields_union
+  fields_union: Joi.object(Object.fromEntries(KEYS.map(k => [k, Joi.boolean()]))),
+
+  // category info (optional)
   category: Joi.string().allow("", null),
   category_confidence: Joi.number().allow(null),
   category_method: Joi.string().allow("", null),
 }).unknown(false);
-
-const submitB = Joi.object({
-  ext_user_id: Joi.string().allow(null, ""),
-  hostname: Joi.string().required(),
-  path: Joi.string().allow("", null),
-  title: Joi.string().allow("", null),
-  last_input_time: Joi.alternatives(Joi.date().iso(), Joi.string()).allow(null),
-  screen_time_seconds: Joi.number().integer().min(0).default(0),
-  event_type: Joi.string().allow("", null).default("submit"),
-  trigger: Joi.string().allow("", null),
-  fields_detected: Joi.object(
-    Object.fromEntries(KEYS.map((k) => [k, Joi.boolean()]))
-  ).required(),
-  category: Joi.string().allow("", null),
-  category_confidence: Joi.number().allow(null),
-  category_method: Joi.string().allow("", null),
-}).unknown(false);
-
-const submitSchema = Joi.alternatives().try(submitA, submitB);
 
 router.post("/submit", async (req, res) => {
   try {
-    const p = await submitSchema.validateAsync(req.body, { stripUnknown: true });
+    const p = await submitSchema.validateAsync(req.body || {}, { stripUnknown: true });
 
-    const submitted = {
-      submitted_name: p.submitted_name ?? p.fields_detected?.name ?? false,
-      submitted_email: p.submitted_email ?? p.fields_detected?.email ?? false,
-      submitted_phone: p.submitted_phone ?? p.fields_detected?.phone ?? false,
-      submitted_card: p.submitted_card ?? p.fields_detected?.card ?? false,
-      submitted_address: p.submitted_address ?? p.fields_detected?.address ?? false,
-      submitted_age: p.submitted_age ?? p.fields_detected?.age ?? false,
-      submitted_gender: p.submitted_gender ?? p.fields_detected?.gender ?? false,
-      submitted_country: p.submitted_country ?? p.fields_detected?.country ?? false,
-    };
-    const anyTrue = Object.values(submitted).some(Boolean);
-    if (!anyTrue) return res.sendStatus(204);
+    // ext_user_id normalized
+    const ext_user_id =
+      safeStr(p.ext_user_id, "") || safeStr(p.extUserId, "") || DEV_FALLBACK_EXT;
 
-    const hostname = normalizeHostname(
-      p.hostname?.startsWith("http") ? p.hostname : `https://${p.hostname}`
-    );
+    // hostname normalized (accepts URL)
+    const rawHost = p.hostname?.startsWith("http") ? p.hostname : `https://${p.hostname}`;
+    const hostname = normalizeHostname(rawHost);
     if (!hostname || isBlocked(hostname)) return res.sendStatus(204);
 
-    const ext_user_id = p.ext_user_id || "ext-7edda547-937d-442a-8fb3-65846e5602c9";
     await getOrCreateUserIdByExt(ext_user_id);
     const website_id = await getOrCreateWebsiteId(hostname);
 
-    // Link to latest site_visit
-    const sv = await db.query(
-      `SELECT id FROM public.site_visits
-        WHERE website_id=$1 AND ext_user_id=$2
-        ORDER BY last_visited DESC LIMIT 1`,
-      [website_id, ext_user_id]
-    );
-    const site_visit_id = sv.rowCount ? sv.rows[0].id : null;
+    // unify flags
+    const src =
+      (p.fields_union && typeof p.fields_union === "object" && p.fields_union) ||
+      (p.fields_detected && typeof p.fields_detected === "object" && p.fields_detected) ||
+      {};
 
-    // Category (detect if Unknown)
+    const submitted = {
+      submitted_name:    p.submitted_name    ?? !!src.name    ?? false,
+      submitted_email:   p.submitted_email   ?? !!src.email   ?? false,
+      submitted_phone:   p.submitted_phone   ?? !!src.phone   ?? false,
+      submitted_card:    p.submitted_card    ?? !!src.card    ?? false,
+      submitted_address: p.submitted_address ?? !!src.address ?? false,
+      submitted_age:     p.submitted_age     ?? !!src.age     ?? false,
+      submitted_gender:  p.submitted_gender  ?? !!src.gender  ?? false,
+      submitted_country: p.submitted_country ?? !!src.country ?? false,
+    };
+
+    // if nothing of interest, no-op
+    if (!Object.values(submitted).some(Boolean)) return res.sendStatus(204);
+
+    // category enrichment (best-effort)
     let category = safeStr(p.category, "") || "Unknown";
     let category_confidence = p.category_confidence ?? null;
     let category_method = safeStr(p.category_method, null);
@@ -453,7 +516,16 @@ router.post("/submit", async (req, res) => {
       } catch {}
     }
 
-    // Build dynamic INSERT based on actual table cols
+    // basic site_visit linkage (optional, best effort)
+    const sv = await db.query(
+      `SELECT id FROM public.site_visits
+        WHERE website_id=$1 AND ext_user_id=$2
+        ORDER BY last_visited DESC LIMIT 1;`,
+      [website_id, ext_user_id]
+    );
+    const site_visit_id = sv.rowCount ? sv.rows[0].id : null;
+
+    // dynamic insert into field_submissions (only existing columns)
     const colsSet = await getFieldSubmissionsCols();
     const cols = ["hostname", "website_id", "site_visit_id", "ext_user_id"];
     const vals = [hostname, website_id, site_visit_id, ext_user_id];
@@ -473,6 +545,7 @@ router.post("/submit", async (req, res) => {
       vals.push(Number(p.screen_time_seconds) || 0);
     }
     if (colsSet.has("path")) { cols.push("path"); vals.push(safeStr(p.path, "")); }
+    if (colsSet.has("title")) { cols.push("title"); vals.push(safeStr(p.title, "")); }
     if (colsSet.has("category")) { cols.push("category"); vals.push(category); }
     if (colsSet.has("category_confidence")) { cols.push("category_confidence"); vals.push(category_confidence); }
     if (colsSet.has("category_method")) { cols.push("category_method"); vals.push(category_method); }
@@ -482,14 +555,11 @@ router.post("/submit", async (req, res) => {
     const sql = `INSERT INTO public.field_submissions (${cols.join(",")}) VALUES (${placeholders});`;
     await db.query(sql, vals);
 
-    // Helpful debug log: which flags were true
-    const trueKeys = Object.entries(submitted).filter(([_, v]) => v).map(([k]) => k).join(", ");
-    console.log(`[submit] saved: ${hostname} user:${ext_user_id} flags{ ${trueKeys} }`);
-
-    // Risk upsert
+    // risk update based on submitted fields
     try {
-      const phishingRes = await classifyPhishing(hostname);
-      const phishingRisk = Number(phishingRes?.phishingScore ?? phishingRes?.score ?? 0) || 0;
+      const ph = await classifyPhishing(hostname);
+      const phishingRisk = clampNum(ph?.phishingScore ?? ph?.score ?? 0, 0, 1, 0);
+
       const flags = {
         name: submitted.submitted_name,
         email: submitted.submitted_email,
@@ -500,7 +570,7 @@ router.post("/submit", async (req, res) => {
         gender: submitted.submitted_gender,
         country: submitted.submitted_country,
       };
-      const risk = computeRisk(flags, phishingRisk, hostname);
+      const risk = (await computeRisk(flags, phishingRisk, hostname)) || {};
       await db.query(
         `
         INSERT INTO public.risk_assessments
@@ -518,32 +588,28 @@ router.post("/submit", async (req, res) => {
         [
           website_id,
           ext_user_id,
-          risk.phishing_risk || 0,
-          risk.data_risk || 0,
-          risk.combined_risk || 0,
-          risk.risk_score || 0,
-          risk.band || "Unknown",
+          clampNum(risk.phishing_risk ?? phishingRisk, 0, 1, 0),
+          clampNum(risk.data_risk ?? 0, 0, 1, 0),
+          clampNum(risk.combined_risk ?? ((phishingRisk + (risk.data_risk ?? 0)) / 2), 0, 1, 0),
+          clampNum(risk.risk_score ?? risk.combined_risk ?? phishingRisk, 0, 1, 0),
+          String(risk.band || "Unknown"),
         ]
-      );
-      console.log(
-        "[submit] risk updated:",
-        hostname,
-        "user:",
-        ext_user_id,
-        "score:",
-        (risk.risk_score || 0) + "%"
       );
     } catch (e) {
       console.warn("[submit] risk update failed:", e?.message || e);
     }
 
+    // log helpful info once
+    const trueKeys = Object.entries(submitted).filter(([, v]) => v).map(([k]) => k).join(", ");
+    console.log(`[submit] saved: ${hostname} user:${ext_user_id} flags{ ${trueKeys} }`);
+
     return res.sendStatus(204);
   } catch (err) {
     if (err?.isJoi) {
-      return res.status(400).json({ error: err.details?.[0]?.message || "invalid submit payload" });
+      return res.status(400).json({ ok: false, error: err.details?.[0]?.message || "invalid submit payload" });
     }
     console.error("[submit] ERROR", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ ok: false, error: "Internal server error" });
   }
 });
 
@@ -556,7 +622,7 @@ router.get("/category/:name", async (req, res) => {
          FROM public.site_visits
         WHERE category = $1
         GROUP BY hostname
-        ORDER BY hostname ASC`,
+        ORDER BY hostname ASC;`,
       [categoryName]
     );
     res.json(rows);
@@ -569,7 +635,7 @@ router.get("/category/:name", async (req, res) => {
 /* -------------------------- Sites by category ---------------------- */
 router.get("/sites", async (req, res, next) => {
   try {
-    const extUserId = String(req.query.extUserId || "").trim();
+    const extUserId = String(req.query.extUserId || req.query.ext_user_id || "").trim();
     const category = String(req.query.category || "").trim();
     if (!extUserId || !category) {
       return res.status(400).json({ ok: false, error: "extUserId and category are required" });
@@ -598,44 +664,43 @@ router.get("/sites", async (req, res, next) => {
     const accepted = (SYN[key] || [category]).map(norm);
 
     const sql = `
-  WITH v AS (
-    SELECT
-      REGEXP_REPLACE(LOWER(COALESCE(sv.hostname,'')), '^www\\.', '') AS host,
-      sv.website_id,
-      sv.category,
-      COALESCE(sv.visit_count, 0)         AS vc,
-      COALESCE(sv.screen_time_seconds, 0) AS st,
-      sv.last_visited,
-      sv.created_at
-    FROM site_visits sv
-    WHERE sv.ext_user_id = $1
-      AND LOWER(
-            REGEXP_REPLACE(
-              REGEXP_REPLACE(COALESCE(sv.category,''), '[_-]+', ' ', 'g'),
-              '\\s+', ' ', 'g'
-            )
-          ) = ANY($2::text[])
-  ),
-  agg AS (
-    SELECT
-      host,
-      MIN(website_id)                                  AS website_id,
-      MAX(COALESCE(last_visited, created_at))          AS last_visited,
-      SUM(vc)::int                                     AS visit_counts,
-      SUM(st)::int                                     AS screen_time_seconds
-    FROM v
-    GROUP BY host
-  )
-  SELECT
-    host AS hostname,
-    website_id,
-    to_char(last_visited AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS "lastVisitISO",
-    visit_counts        AS "visitCounts",
-    screen_time_seconds AS "screenTimeSeconds"
-  FROM agg
-  ORDER BY host ASC;
-`;
-
+      WITH v AS (
+        SELECT
+          REGEXP_REPLACE(LOWER(COALESCE(sv.hostname,'')), '^www\\.', '') AS host,
+          sv.website_id,
+          sv.category,
+          COALESCE(sv.visit_count, 0)         AS vc,
+          COALESCE(sv.screen_time_seconds, 0) AS st,
+          sv.last_visited,
+          sv.created_at
+        FROM site_visits sv
+        WHERE sv.ext_user_id = $1
+          AND LOWER(
+                REGEXP_REPLACE(
+                  REGEXP_REPLACE(COALESCE(sv.category,''), '[_-]+', ' ', 'g'),
+                  '\\s+', ' ', 'g'
+                )
+              ) = ANY($2::text[])
+      ),
+      agg AS (
+        SELECT
+          host,
+          MIN(website_id)                                  AS website_id,
+          MAX(COALESCE(last_visited, created_at))          AS last_visited,
+          SUM(vc)::int                                     AS visit_counts,
+          SUM(st)::int                                     AS screen_time_seconds
+        FROM v
+        GROUP BY host
+      )
+      SELECT
+        host AS hostname,
+        website_id,
+        to_char(last_visited AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS "lastVisitISO",
+        visit_counts        AS "visitCounts",
+        screen_time_seconds AS "screenTimeSeconds"
+      FROM agg
+      ORDER BY host ASC;
+    `;
 
     const { rows } = await db.query(sql, [extUserId, accepted]);
     return res.json(rows);

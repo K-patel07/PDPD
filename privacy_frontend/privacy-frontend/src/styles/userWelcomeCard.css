@@ -1,6 +1,9 @@
 /* ====== REMOVE / DISABLE GIF (no markup changes needed) ====== */
 
 /* stop reserving space for art on the right */
+
+/* Top padding just for the Welcome card */
+
 .greet-card .greet-content,
 .welcome-card .greet-content,
 .user-welcome-card .greet-content{
@@ -31,13 +34,13 @@
 
 /* Light theme gradient */
 .greet-card{
-  background: linear-gradient(100deg, rgba(73,74,148), rgba(56,150,174,0.9)) !important;
-  color: #fff; /* optional: ensures good contrast */
+  background: linear-gradient(135deg, rgba(73, 74, 148, 0.467), rgba(56,150,174,0.9)) !important;
+  color: #000000; /* optional: ensures good contrast */
 }
 
 /* Dark theme gradient */
 .dark .greet-card, .theme-dark .greet-card{
-  background: linear-gradient(100deg, rgba(116,117,195,), rgba(0,23,29,0.92)) !important;
+  background: linear-gradient(135deg, rgba(116,117,195,0.7), rgba(0, 81, 101, 0.9)) !important;
   color: #fff; /* optional */
 }
 
@@ -45,16 +48,23 @@
 
 .greet-card p, .welcome-card p, .user-welcome-card p{ 
   margin: 0; 
-  font-size: 1.0rem; 
+  font-size: 1.1rem; 
   font-weight: 600; 
   letter-spacing: .2px; 
-  color: rgb(255, 255, 255); 
+  color: rgb(0, 0, 0); 
 } 
 
 .dark .greet-card p, .welcome-card p, .user-welcome-card p{ 
   margin: 0; 
-  font-size: 1.0rem; 
+  font-size: 1.1rem; 
   font-weight: 600; 
   letter-spacing: .2px; 
   color: rgb(255, 255, 255); 
+}
+
+
+
+/* outer box of the welcome card */
+.welcome-card {
+  padding: var(--welcome-pad);
 }

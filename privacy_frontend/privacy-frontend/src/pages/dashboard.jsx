@@ -25,7 +25,7 @@ function GreetingCard({ user }) {
     <section className="card greet-card" aria-label="Welcome">
       <div className="greet-content">
         <div className="greet-copy">
-          <h3>Welcome back, {user?.firstName || "User"}!</h3>
+          <h2>Welcome back!</h2>
           <p>Let's audit your digital exposure.</p>
         </div>
         <div className="greet-art">

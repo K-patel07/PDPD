@@ -154,7 +154,7 @@ export default function TrendLineCard({
   return (
     <section className="card trend-card line-card" aria-label="Login trend">
       <div className="line-top">
-        <h4>Login Frequency</h4>
+        <h4>Visit Frequency</h4>
         <label className="select-like">
           <select value={range} onChange={(e) => setRange(e.target.value)}>
             <option value="weekly">Weekly</option>
