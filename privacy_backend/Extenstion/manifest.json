@@ -20,13 +20,15 @@
   
   "host_permissions": [
     "<all_urls>",                              
-    "https://your-backend.onrender.com/*"        
+    "https://privacypulse-9xnj.onrender.com/*"        
   ],
 
   "action": {
     "default_title": "PDPD",
     "default_popup": "popup.html"
   },
+
+  "options_page": "options.html",
 
   "background": {
     "service_worker": "background.js",
@@ -43,7 +45,8 @@
     {
       
       "matches": [
-        "https://your-frontend.onrender.com/*"  
+        "https://privacy.pulse-pr5m.onrender.com/*"  
+      ],
       "js": ["content-bridge.js"],
       "run_at": "document_start"
     }

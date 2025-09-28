@@ -208,7 +208,8 @@ async function ensureTables(client) {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       visit_count INTEGER NOT NULL DEFAULT 1,
       last_visited TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      visit_date DATE
+      visit_date DATE,
+      CONSTRAINT ux_site_visits_user_host UNIQUE (ext_user_id, hostname)
     );
   `);
 

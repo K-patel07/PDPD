@@ -1,6 +1,6 @@
 // popup.js — PrivacyPulse (MV3) — production
 
-const API_BASE = "http://localhost:3000"; // change for prod
+const API_BASE = "https://privacypulse-9xnj.onrender.com"; // production backend
 
 // ----- toggle -----
 async function getEnabled() {

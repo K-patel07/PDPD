@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PrivacyPulse Settings</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #fff;
+      --muted: #6b7280;
+      --ink: #0f172a;
+      --ring: #e5e7eb;
+      --success: #10b981;
+      --error: #ef4444;
+      --warning: #f59e0b;
+    }
+    
+    * { box-sizing: border-box; }
+    
+    body {
+      margin: 0;
+      background: var(--bg);
+      font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .title {
+      font-weight: 800;
+      font-size: 24px;
+      color: var(--ink);
+      margin: 0 0 8px;
+    }
+    
+    .subtitle {
+      color: var(--muted);
+      font-size: 16px;
+      margin: 0;
+    }
+    
+    .card {
+      background: var(--card);
+      border: 1px solid var(--ring);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .card-title {
+      font-weight: 600;
+      font-size: 18px;
+      color: var(--ink);
+      margin: 0 0 16px;
+    }
+    
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    .form-label {
+      display: block;
+      font-weight: 500;
+      color: var(--ink);
+      margin-bottom: 6px;
+    }
+    
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--ring);
+      border-radius: 8px;
+      font-size: 14px;
+      background: var(--card);
+    }
+    
+    .form-input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    
+    .btn {
+      display: inline-block;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      text-decoration: none;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #1e4fc1;
+    }
+    
+    .btn-secondary {
+      background: var(--ring);
+      color: var(--ink);
+    }
+    
+    .btn-secondary:hover {
+      background: #d1d5db;
+    }
+    
+    .btn-danger {
+      background: var(--error);
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+    
+    .status {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-weight: 500;
+    }
+    
+    .status-success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+    
+    .status-error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+    }
+    
+    .status-warning {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+    }
+    
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--ring);
+    }
+    
+    .toggle-row:last-child {
+      border-bottom: none;
+    }
+    
+    .toggle-label {
+      font-weight: 500;
+      color: var(--ink);
+    }
+    
+    .toggle-hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      background: var(--ring);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .toggle-switch.active {
+      background: #2563eb;
+    }
+    
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    
+    .toggle-switch.active::after {
+      transform: translateX(20px);
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    .text-center {
+      text-align: center;
+    }
+    
+    .mt-4 {
+      margin-top: 16px;
+    }
+    
+    .mb-4 {
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 class="title">PrivacyPulse Settings</h1>
+      <p class="subtitle">Manage your privacy tracking preferences</p>
+    </div>
+
+    <!-- Authentication Status -->
+    <div class="card">
+      <h2 class="card-title">Authentication</h2>
+      <div id="auth-status" class="status status-warning">
+        Not authenticated. Please log in to sync your data.
+      </div>
+      <div id="auth-form" class="form-group">
+        <label class="form-label" for="email">Email</label>
+        <input type="email" id="email" class="form-input" placeholder="your@email.com">
+        
+        <label class="form-label" for="password">Password</label>
+        <input type="password" id="password" class="form-input" placeholder="Your password">
+        
+        <button id="login-btn" class="btn btn-primary mt-4">Log In</button>
+        <button id="logout-btn" class="btn btn-danger mt-4 hidden">Log Out</button>
+      </div>
+      <div class="text-center mt-4">
+        <a href="https://privacy.pulse-pr5m.onrender.com" target="_blank" class="btn btn-secondary">
+          Open Dashboard
+        </a>
+      </div>
+    </div>
+
+    <!-- Privacy Settings -->
+    <div class="card">
+      <h2 class="card-title">Privacy Settings</h2>
+      
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Enable Tracking</div>
+          <div class="toggle-hint">Allow the extension to track your browsing activity</div>
+        </div>
+        <div class="toggle-switch" id="tracking-toggle"></div>
+      </div>
+      
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Form Detection</div>
+          <div class="toggle-hint">Detect when you fill out forms (no sensitive data collected)</div>
+        </div>
+        <div class="toggle-switch" id="forms-toggle"></div>
+      </div>
+      
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Screen Time Tracking</div>
+          <div class="toggle-hint">Track time spent on websites</div>
+        </div>
+        <div class="toggle-switch" id="screentime-toggle"></div>
+      </div>
+    </div>
+
+    <!-- Data Management -->
+    <div class="card">
+      <h2 class="card-title">Data Management</h2>
+      
+      <div class="form-group">
+        <label class="form-label">Clear Local Data</label>
+        <p style="color: var(--muted); font-size: 12px; margin: 4px 0 12px;">
+          This will clear all locally stored data including offline queue and settings.
+        </p>
+        <button id="clear-data-btn" class="btn btn-danger">Clear All Data</button>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Export Data</label>
+        <p style="color: var(--muted); font-size: 12px; margin: 4px 0 12px;">
+          Download your privacy data for analysis.
+        </p>
+        <button id="export-data-btn" class="btn btn-secondary">Export Data</button>
+      </div>
+    </div>
+
+    <!-- About -->
+    <div class="card">
+      <h2 class="card-title">About PrivacyPulse</h2>
+      <p style="color: var(--muted); margin: 0 0 16px;">
+        PrivacyPulse helps you understand your digital privacy footprint by tracking 
+        your browsing patterns and form interactions without collecting sensitive personal data.
+      </p>
+      <div class="text-center">
+        <a href="https://privacy.pulse-pr5m.onrender.com/privacy" target="_blank" class="btn btn-secondary">
+          Privacy Policy
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

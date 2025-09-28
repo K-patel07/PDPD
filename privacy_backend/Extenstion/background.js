@@ -2,7 +2,7 @@
 // Visits + live screen-time + submit enrichment
 // Works with content.js that sends: PAGE_VISIT and FORM_SUBMIT
 
-const API_BASE = "http://localhost:3000"; // must match popup
+const API_BASE = "https://privacypulse-9xnj.onrender.com"; // production backend
 
 /* =========================
    CONFIG
@@ -112,26 +112,99 @@ async function estimateScreenTimeFor(hostname) {
 }
 
 /* =========================
+   OFFLINE QUEUE & RETRY LOGIC
+========================= */
+const OFFLINE_QUEUE_KEY = "offline_queue";
+const MAX_RETRIES = 3;
+const RETRY_DELAYS = [1000, 5000, 15000]; // 1s, 5s, 15s
+
+async function addToOfflineQueue(payload) {
+  const { [OFFLINE_QUEUE_KEY]: queue = [] } = await chrome.storage.local.get(OFFLINE_QUEUE_KEY);
+  queue.push({
+    ...payload,
+    timestamp: Date.now(),
+    retryCount: 0
+  });
+  await chrome.storage.local.set({ [OFFLINE_QUEUE_KEY]: queue });
+}
+
+async function processOfflineQueue() {
+  const { [OFFLINE_QUEUE_KEY]: queue = [] } = await chrome.storage.local.get(OFFLINE_QUEUE_KEY);
+  if (queue.length === 0) return;
+
+  const now = Date.now();
+  const toProcess = [];
+  const toKeep = [];
+
+  for (const item of queue) {
+    const age = now - item.timestamp;
+    const shouldRetry = item.retryCount < MAX_RETRIES && age > RETRY_DELAYS[item.retryCount];
+    
+    if (shouldRetry) {
+      toProcess.push(item);
+    } else if (item.retryCount < MAX_RETRIES) {
+      toKeep.push(item);
+    }
+    // Items that exceed max retries are dropped
+  }
+
+  if (toProcess.length > 0) {
+    for (const item of toProcess) {
+      const { path, bodyObj, ...rest } = item;
+      const success = await postJSON(path, bodyObj);
+      
+      if (success) {
+        console.log(`[offline] Successfully sent queued item: ${path}`);
+      } else {
+        item.retryCount++;
+        toKeep.push(item);
+      }
+    }
+    
+    await chrome.storage.local.set({ [OFFLINE_QUEUE_KEY]: toKeep });
+  }
+}
+
+/* =========================
    NETWORK HELPERS
 ========================= */
 async function postJSON(path, bodyObj) {
   const { token } = await getIdentity();
   const headers = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(bodyObj),
-  }).catch((err) => {
-    console.warn(`[postJSON ${path}] error:`, err);
-    return null;
-  });
-  return !!(res && res.ok);
+  
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(bodyObj),
+    });
+    
+    if (res.ok) {
+      return true;
+    } else {
+      console.warn(`[postJSON ${path}] HTTP ${res.status}: ${res.statusText}`);
+      return false;
+    }
+  } catch (err) {
+    console.warn(`[postJSON ${path}] Network error:`, err.message);
+    return false;
+  }
 }
 
 async function sendVisit(payload) {
   const { ext_user_id } = await getIdentity();
-  return postJSON("/api/track/visit", { ...payload, ext_user_id });
+  const success = await postJSON("/api/track/visit", { ...payload, ext_user_id });
+  
+  if (!success) {
+    // Queue for retry when offline
+    await addToOfflineQueue({
+      path: "/api/track/visit",
+      bodyObj: { ...payload, ext_user_id }
+    });
+  }
+  
+  return success;
 }
 
 async function sendSubmit(payload) {
@@ -147,7 +220,17 @@ async function sendSubmit(payload) {
   const hasSubmitted = submittedKeys.some(k => !!payload[k]);
   if (!hasFD && !hasSubmitted) return false;
 
-  return postJSON("/api/track/submit", { ...payload, ext_user_id });
+  const success = await postJSON("/api/track/submit", { ...payload, ext_user_id });
+  
+  if (!success) {
+    // Queue for retry when offline
+    await addToOfflineQueue({
+      path: "/api/track/submit",
+      bodyObj: { ...payload, ext_user_id }
+    });
+  }
+  
+  return success;
 }
 
 async function flushDelta(hostname, seconds) {
@@ -249,6 +332,10 @@ async function cancelFlushAlarm() {
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== ALARM_NAME) return;
+  
+  // Process offline queue first
+  await processOfflineQueue();
+  
   if (current.state !== "COUNTING" || !current.hostname || !current.startedAt) return;
 
   const now = Date.now();
@@ -268,7 +355,7 @@ async function onAuthSuccess(data) {
   await chrome.storage.local.set({
     auth_token: data.token,
     ext_user_id: data.ext_user_id,
-    dashboard_url: "https://your-dashboard.example", // optional
+    dashboard_url: "https://privacy.pulse-pr5m.onrender.com", // production frontend
     popup_status: "ON"
   });
 }
@@ -339,14 +426,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 /* =========================
    EVENT WIRING
 ========================= */
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(async () => {
   chrome.idle.setDetectionInterval(IDLE_SECONDS);
-  chrome.storage.local.get("enabled").then(({ enabled }) => {
-    if (enabled === undefined) chrome.storage.local.set({ enabled: true }); // default ON
-  });
+  const { enabled } = await chrome.storage.local.get("enabled");
+  if (enabled === undefined) await chrome.storage.local.set({ enabled: true }); // default ON
+  
+  // Process any queued items on startup
+  await processOfflineQueue();
 });
-chrome.runtime.onStartup.addListener(() => {
+chrome.runtime.onStartup.addListener(async () => {
   chrome.idle.setDetectionInterval(IDLE_SECONDS);
+  // Process any queued items on startup
+  await processOfflineQueue();
 });
 
 chrome.idle.onStateChanged.addListener(async (newState) => {
