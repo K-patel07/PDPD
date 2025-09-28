@@ -34,13 +34,13 @@
 
 /* Light theme gradient */
 .greet-card{
-  background: linear-gradient(135deg, rgba(73, 74, 148, 0.467), rgba(56,150,174,0.9)) !important;
-  color: white /* optional: ensures good contrast */
+  background: linear-gradient(70deg, rgba(73, 74, 148, 0.467), rgba(56,150,174,0.9)) !important;
+  color: black /* optional: ensures good contrast */
 }
 
 /* Dark theme gradient */
 .dark .greet-card, .theme-dark .greet-card{
-  background: linear-gradient(135deg, rgba(73, 74, 148, 0.467), rgba(56,150,174,0.9)) !important;
+  background: linear-gradient(70deg, rgba(73, 74, 148, 0.467), rgba(56,150,174,0.9)) !important;
   color: #fff; /* optional */
 }
 
@@ -51,7 +51,7 @@
   font-size: 1.1rem; 
   font-weight: 600; 
   letter-spacing: .2px; 
-  color: white; 
+  color: black; 
 } 
 
 .dark .greet-card p, .welcome-card p, .user-welcome-card p{ 
