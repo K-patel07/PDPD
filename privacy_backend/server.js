@@ -84,6 +84,17 @@ app.use((req, _res, next) => {
   next();
 });
 
+// Request timeout middleware to prevent hanging requests
+app.use((req, res, next) => {
+  res.setTimeout(30000, () => {
+    console.warn(`[TIMEOUT] Request to ${req.originalUrl} timed out`);
+    if (!res.headersSent) {
+      res.status(408).json({ ok: false, error: "Request timeout" });
+    }
+  });
+  next();
+});
+
 // Parsers
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false, limit: "1mb" }));
@@ -218,18 +229,18 @@ app.post("/api/phishing-check", async (req, res) => {
   }
 });
 
-/* ------------------------- Route Protection -------------------------- */
-// Keep /api/track/visit public; protect submit/risk/metrics behind JWT
-app.use("/api/track/submit", requireAuth);
-app.use("/api/risk", requireAuth);
-app.use("/api/metrics", requireAuth);
-
 /* -------------------------------- Routes ----------------------------- */
+// Public routes first
 app.use("/api/track", trackRoutes);
 app.use("/api/classify", classifyRoutes);
+app.use("/api/auth", authRoutes);
+
+/* ------------------------- Route Protection -------------------------- */
+// Protect specific endpoints that need authentication
+app.use("/api/risk", requireAuth);
+app.use("/api/metrics", requireAuth);
 app.use("/api/risk", riskRoutes);
 app.use("/api/metrics", metricsRoutes);
-app.use("/api/auth", authRoutes);
 
 /* ------------------------------ 404/Errors --------------------------- */
 app.use((req, res) => {
@@ -244,10 +255,14 @@ app.use((err, _req, res, _next) => {
   const status = err.status || 500;
   // In prod, keep logs terse; in dev, print full error
   console.error("[UNHANDLED ERROR]", IS_PROD ? err?.message || err : err);
-  res.status(status).json({
-    ok: false,
-    message: err.message || "Internal Server Error",
-  });
+  
+  // Prevent hanging requests - ensure response is sent
+  if (!res.headersSent) {
+    res.status(status).json({
+      ok: false,
+      message: err.message || "Internal Server Error",
+    });
+  }
 });
 
 /* --------------------------- Process Guards -------------------------- */

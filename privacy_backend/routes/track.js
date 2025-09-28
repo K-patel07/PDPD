@@ -6,6 +6,7 @@ const Joi = require("joi");
 const jwt = require("jsonwebtoken");
 const psl = require("psl");
 const db = require("../db");
+const { requireAuth } = require("../middleware/jwt");
 
 const { detectCategoryForVisit } = require("../services/categorizer");
 const { classifyPhishing } = require("../services/phishingModel");
@@ -463,13 +464,15 @@ const submitSchema = Joi.object({
   category_method: Joi.string().allow("", null),
 }).unknown(false);
 
-router.post("/submit", async (req, res) => {
+router.post("/submit", requireAuth, async (req, res) => {
   try {
     const p = await submitSchema.validateAsync(req.body || {}, { stripUnknown: true });
 
-    // ext_user_id normalized
-    const ext_user_id =
-      safeStr(p.ext_user_id, "") || safeStr(p.extUserId, "") || DEV_FALLBACK_EXT;
+    // Get ext_user_id from authenticated user (set by requireAuth middleware)
+    const ext_user_id = req.user?.ext_user_id || req.user?.sub;
+    if (!ext_user_id) {
+      return res.status(401).json({ ok: false, error: "Authentication required" });
+    }
 
     // hostname normalized (accepts URL)
     const rawHost = p.hostname?.startsWith("http") ? p.hostname : `https://${p.hostname}`;
