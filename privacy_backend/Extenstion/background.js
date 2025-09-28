@@ -208,7 +208,7 @@ async function sendVisit(payload) {
 }
 
 async function sendSubmit(payload) {
-  const { ext_user_id } = await getIdentity();
+  const { ext_user_id, token } = await getIdentity();
 
   // Guard: ensure at least one meaningful flag
   const fd = payload.fields_detected || {};
@@ -219,6 +219,12 @@ async function sendSubmit(payload) {
   ];
   const hasSubmitted = submittedKeys.some(k => !!payload[k]);
   if (!hasFD && !hasSubmitted) return false;
+
+  // Skip if no authentication token
+  if (!token) {
+    console.warn("[sendSubmit] No authentication token, skipping submit");
+    return false;
+  }
 
   const success = await postJSON("/api/track/submit", { ...payload, ext_user_id });
   
