@@ -37,12 +37,7 @@ const otpStore = new Map(); // email -> { code, expiresAt, tries }
 /** For TOTP secrets & status. Persist in DB for real-world use. */
 const totpStore = new Map(); // email -> { secret, enabled: boolean }
 
-const { rows } = await db.query(`
-  SELECT id, email, username, password_hash
-  FROM users
-  WHERE LOWER(email) = LOWER($1)
-  LIMIT 1
-`, [req.body.email]);
+// Removed stray await statement that was outside any function
 /* --------------------------- Mail Transport --------------------------- */
 /**
  * Uses SMTP if available, otherwise falls back to a safe JSON transport
