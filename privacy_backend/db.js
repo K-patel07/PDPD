@@ -102,6 +102,44 @@ async function ensureUsersTable(pool) {
       updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
+  // If an older users table exists (e.g., SERIAL id, missing timestamps), add required columns
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'created_at'
+      ) THEN
+        ALTER TABLE public.users ADD COLUMN created_at TIMESTAMPTZ NOT NULL DEFAULT now();
+      END IF;
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'updated_at'
+      ) THEN
+        ALTER TABLE public.users ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+      END IF;
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'ext_user_id'
+      ) THEN
+        ALTER TABLE public.users ADD COLUMN ext_user_id TEXT;
+      END IF;
+      -- Ensure email is NOT NULL for consistency (only if no NULLs)
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'email'
+      ) THEN
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM public.users WHERE email IS NULL) THEN
+            ALTER TABLE public.users ALTER COLUMN email SET NOT NULL;
+          END IF;
+        EXCEPTION WHEN undefined_column THEN
+          -- ignore if column differs in older schema
+          NULL;
+        END;
+      END IF;
+    END$$;
+  `);
   await pool.query(`
     CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_uniq
     ON users (LOWER(email));
