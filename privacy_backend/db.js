@@ -89,6 +89,28 @@ async function query(text, params = []) {
   return pool.query(text, params);
 }
 
+async function ensureUsersTable(pool) {
+  await pool.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto;`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      email         TEXT NOT NULL,
+      username      TEXT,
+      password_hash TEXT NOT NULL,
+      ext_user_id   TEXT UNIQUE,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_uniq
+    ON users (LOWER(email));
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS users_email_idx ON users (email);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS users_ext_user_id_idx ON users (ext_user_id);`);
+  console.log("[db] users table ensured ✅");
+}
+
 /* ----------------------------- Tx helper --------------------------- */
 async function withTx(fn) {
   const client = await pool.connect();
@@ -624,6 +646,7 @@ async function updateRiskForUserWebsite(ext_user_id, hostname) {
 /* ------------------------------ Exports --------------------------- */
 module.exports = {
   pool,
+  ensureUsersTable,
   ping,
   query,
   withTx,

@@ -44,6 +44,14 @@ app.get("/health/db", async (_req, res) => {
   }
 });
 
+(async () => {
+  try {
+    await db.ensureUsersTable(db.pool);
+  } catch (e) {
+    console.error("[db] init error", e);
+  }
+})();
+
 /* --------------------------- Hardening/Base -------------------------- */
 app.disable("x-powered-by");
 app.set("etag", false); // avoid 304 confusion on API clients
