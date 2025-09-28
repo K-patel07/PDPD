@@ -1,6 +1,7 @@
 // routes/auth.js
 const express = require("express");
 const router = express.Router();
+
 const db = require("../db");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -8,298 +9,313 @@ const { randomUUID } = require("crypto");
 const nodemailer = require("nodemailer");
 const { authenticator } = require("otplib");
 
-// ✅ validators you already have
-const { validate } = require("../middleware/validate");
+const { validate, withValidators } = require("../middleware/validate");
 const {
   registerValidator,
   loginValidator,
+  otpSendValidator,
+  otpVerifyValidator,
+  totpSetupValidator,
+  totpVerifyValidator,
 } = require("../middleware/validators/authValidators");
 
-// ====== CONFIG / HELPERS ======================================================
-const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-key-change-in-production";
+/* ----------------------------- Config ------------------------------ */
+const JWT_SECRET =
+  process.env.JWT_SECRET || "dev-only-secret-change-in-production";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
+const signToken = (payload) =>
+  jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
-const signToken = (payload) => jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+const SALT_ROUNDS = 10;
+const OTP_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const OTP_MAX_TRIES = 5;
 
-// In-memory stores (demo-friendly). Replace with DB tables if needed.
-const otpStore = new Map();   // key: email -> { code, expiresAt, tries }
-const totpStore = new Map();  // key: email -> { secret, enabled }
+/* --------------------------- In-memory stores --------------------------- */
+/** For email OTP (not TOTP). In production, store in DB or Redis. */
+const otpStore = new Map(); // email -> { code, expiresAt, tries }
 
-// Nodemailer transport: use real SMTP if provided, else dev console transport.
-const transporter = process.env.SMTP_HOST
-  ? nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT || 587),
-      secure: !!process.env.SMTP_SECURE, // true for 465, false for 587
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    })
-  : nodemailer.createTransport({
-      streamTransport: true,
-      newline: "unix",
-      buffer: true,
+/** For TOTP secrets & status. Persist in DB for real-world use. */
+const totpStore = new Map(); // email -> { secret, enabled: boolean }
+
+/* --------------------------- Mail Transport --------------------------- */
+/**
+ * Uses SMTP if available, otherwise falls back to a safe JSON transport
+ * that logs emails to the console (no external call).
+ */
+function buildTransport() {
+  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
+
+  if (SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASS) {
+    return nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: Number(SMTP_PORT),
+      secure: Number(SMTP_PORT) === 465,
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
     });
-
-function sixDigits() {
-  return String(Math.floor(100000 + Math.random() * 900000));
-}
-
-async function ensureExtUserId(user) {
-  if (user.ext_user_id) return user.ext_user_id;
-  const ext = "ext-" + randomUUID();
-  const upd = await db.pool.query("UPDATE users SET ext_user_id=$1 WHERE id=$2 RETURNING ext_user_id", [ext, user.id]);
-  return upd.rows[0].ext_user_id;
-}
-
-// ====== SIGNUP ===============================================================
-router.post("/signup", registerValidator, validate, async (req, res, next) => {
-  try {
-    const { username, email, password } = req.body;
-
-    // Uniqueness
-    const emailDup = await db.pool.query("SELECT 1 FROM users WHERE email=$1", [email]);
-    if (emailDup.rows.length) return res.status(409).json({ ok: false, error: "User with this email already exists" });
-
-    const userDup = await db.pool.query("SELECT 1 FROM users WHERE username=$1", [username]);
-    if (userDup.rows.length) return res.status(409).json({ ok: false, error: "Username already taken" });
-
-    // Create
-    const password_hash = await bcrypt.hash(password, 12);
-    const { rows } = await db.pool.query(
-      "INSERT INTO users (username,email,password_hash,created_at) VALUES ($1,$2,$3,NOW()) RETURNING *",
-      [username, email, password_hash]
-    );
-    const newUser = rows[0];
-
-    const ext_user_id = await ensureExtUserId(newUser);
-
-    const token = signToken({
-      userId: newUser.id,
-      ext_user_id,
-      username: newUser.username,
-      email: newUser.email,
-    });
-
-    res.status(201).json({
-      ok: true,
-      message: "User created successfully",
-      token,
-      ext_user_id,
-      user: { id: newUser.id, username: newUser.username, email: newUser.email },
-    });
-  } catch (err) {
-    console.error("Signup error:", err);
-    next(err);
   }
-});
 
-// ====== LOGIN (password -> JWT) ==============================================
-router.post("/login", loginValidator, validate, async (req, res) => {
-  try {
-    const { email, password } = req.body;
+  // Dev fallback: don't error if SMTP isn't configured
+  return nodemailer.createTransport({ jsonTransport: true });
+}
 
-    const { rows } = await db.pool.query("SELECT * FROM users WHERE email=$1", [email]);
-    const user = rows[0];
-    if (!user) return res.status(401).json({ ok: false, error: "Invalid credentials" });
+const mailer = buildTransport();
 
-    if (user.password_hash) {
-      const ok = await bcrypt.compare(password, user.password_hash);
-      if (!ok) return res.status(401).json({ ok: false, error: "Invalid credentials" });
-    }
+/* ----------------------------- Helpers ----------------------------- */
+async function findUserByEmail(email) {
+  const q = `SELECT id, email, username, password_hash, ext_user_id
+             FROM users WHERE email = $1 LIMIT 1`;
+  const { rows } = await db.query(q, [email]);
+  return rows[0] || null;
+}
 
-    const ext_user_id = await ensureExtUserId(user);
+async function findUserByUsername(username) {
+  const q = `SELECT id FROM users WHERE username = $1 LIMIT 1`;
+  const { rows } = await db.query(q, [username]);
+  return rows[0] || null;
+}
 
-    // (optional) record login event if table exists
+async function createUser({ email, username, passwordHash, extUserId }) {
+  const q = `
+    INSERT INTO users (email, username, password_hash, ext_user_id, created_at)
+    VALUES ($1, $2, $3, $4, NOW())
+    RETURNING id, email, username, ext_user_id
+  `;
+  const { rows } = await db.query(q, [
+    email,
+    username,
+    passwordHash,
+    extUserId,
+  ]);
+  return rows[0];
+}
+
+function sanitizeUser(u) {
+  if (!u) return null;
+  const { password_hash, ...rest } = u;
+  return rest;
+}
+
+/* ------------------------------ Routes ------------------------------ */
+
+/**
+ * POST /auth/register
+ * Body: { email, username, password }
+ */
+router.post(
+  "/register",
+  registerValidator,
+  validate,
+  async (req, res) => {
     try {
-      await db.pool.query("INSERT INTO login_events (ext_user_id) VALUES ($1)", [ext_user_id]);
-    } catch (_) {}
+      const { email, username, password } = req.body;
 
-    const token = signToken({
-      userId: user.id,
-      ext_user_id,
-      username: user.username,
-      email: user.email,
-    });
+      const [existingEmail, existingUsername] = await Promise.all([
+        findUserByEmail(email),
+        findUserByUsername(username),
+      ]);
+      if (existingEmail)
+        return res.status(409).json({ ok: false, error: "Email already in use" });
+      if (existingUsername)
+        return res.status(409).json({ ok: false, error: "Username already taken" });
 
-    res.json({
-      ok: true,
-      token,
-      ext_user_id,
-      user: { id: user.id, username: user.username, email: user.email },
-    });
-  } catch (e) {
-    console.error("Login error:", e);
-    res.status(500).json({ ok: false, error: "Login error" });
-  }
-});
+      const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+      const extUserId = randomUUID();
 
-// ====== EMAIL OTP (2FA) ======================================================
-// 1) Request OTP
-router.post("/email-otp/request", async (req, res) => {
-  try {
-    const email = String(req.body.email || "").trim().toLowerCase();
-    if (!email) return res.status(400).json({ ok: false, error: "email required" });
+      const user = await createUser({
+        email,
+        username,
+        passwordHash,
+        extUserId,
+      });
 
-    const code = sixDigits();
-    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
-    otpStore.set(email, { code, expiresAt, tries: 0 });
+      const token = signToken({
+        sub: user.id,
+        email: user.email,
+        username: user.username,
+        ext_user_id: user.ext_user_id,
+      });
 
-    const info = await transporter.sendMail({
-      from: process.env.MAIL_FROM || "no-reply@privacypulse.app",
-      to: email,
-      subject: "Your PrivacyPulse verification code",
-      text: `Your one-time code is ${code}. It expires in 5 minutes.`,
-    });
-
-    // If using dev transport, log the raw message so you can see it in terminal
-    if (info.message) {
-      console.log("[email-otp] message preview:\n" + info.message.toString());
+      return res.status(201).json({
+        ok: true,
+        token,
+        user,
+      });
+    } catch (err) {
+      console.error("[register] ERROR:", err);
+      return res.status(500).json({ ok: false, error: "Internal server error" });
     }
-
-    res.json({ ok: true, message: "OTP sent to email" });
-  } catch (e) {
-    console.error("email-otp/request error:", e);
-    res.status(500).json({ ok: false, error: "failed to send OTP" });
   }
-});
+);
 
-// 2) Verify OTP
-router.post("/email-otp/verify", async (req, res) => {
-  try {
-    const email = String(req.body.email || "").trim().toLowerCase();
-    const code = String(req.body.code || "").trim();
-    if (!email || !code) return res.status(400).json({ ok: false, error: "email and code required" });
+/**
+ * POST /auth/login
+ * Body: { email, password }
+ */
+router.post(
+  "/login",
+  loginValidator,
+  validate,
+  async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      const user = await findUserByEmail(email);
+      if (!user)
+        return res.status(401).json({ ok: false, error: "Invalid credentials" });
 
-    const rec = otpStore.get(email);
-    if (!rec) return res.status(400).json({ ok: false, error: "no OTP requested" });
-    if (Date.now() > rec.expiresAt) {
+      const ok = await bcrypt.compare(password, user.password_hash);
+      if (!ok)
+        return res.status(401).json({ ok: false, error: "Invalid credentials" });
+
+      const token = signToken({
+        sub: user.id,
+        email: user.email,
+        username: user.username,
+        ext_user_id: user.ext_user_id,
+      });
+
+      return res.json({
+        ok: true,
+        token,
+        user: sanitizeUser(user),
+      });
+    } catch (err) {
+      console.error("[login] ERROR:", err);
+      return res.status(500).json({ ok: false, error: "Internal server error" });
+    }
+  }
+);
+
+/**
+ * POST /auth/otp/send
+ * Body: { email }
+ * Sends a one-time 6-digit code via email. Expires in 10 minutes.
+ */
+router.post(
+  "/otp/send",
+  otpSendValidator,
+  validate,
+  async (req, res) => {
+    try {
+      const { email } = req.body;
+      const user = await findUserByEmail(email);
+      if (!user) return res.status(404).json({ ok: false, error: "User not found" });
+
+      const code = String(Math.floor(100000 + Math.random() * 900000));
+      const expiresAt = Date.now() + OTP_WINDOW_MS;
+
+      otpStore.set(email, { code, expiresAt, tries: 0 });
+
+      const info = await mailer.sendMail({
+        to: email,
+        from: process.env.MAIL_FROM || "no-reply@yourapp.local",
+        subject: "Your verification code",
+        text: `Your verification code is ${code}. It expires in 10 minutes.`,
+      });
+
+      // If using jsonTransport, info.message will be a JSON string. It’s fine in dev.
+      return res.json({ ok: true, sent: !!info, hint: process.env.SMTP_HOST ? undefined : "dev-json-transport" });
+    } catch (err) {
+      console.error("[otp/send] ERROR:", err);
+      return res.status(500).json({ ok: false, error: "Failed to send code" });
+    }
+  }
+);
+
+/**
+ * POST /auth/otp/verify
+ * Body: { email, code }
+ */
+router.post(
+  "/otp/verify",
+  otpVerifyValidator,
+  validate,
+  async (req, res) => {
+    try {
+      const { email, code } = req.body;
+      const rec = otpStore.get(email);
+      if (!rec) return res.status(400).json({ ok: false, error: "No active code" });
+
+      if (Date.now() > rec.expiresAt) {
+        otpStore.delete(email);
+        return res.status(400).json({ ok: false, error: "Code expired" });
+      }
+
+      if (rec.tries >= OTP_MAX_TRIES) {
+        otpStore.delete(email);
+        return res.status(429).json({ ok: false, error: "Too many attempts" });
+      }
+
+      rec.tries += 1;
+
+      if (rec.code !== code) {
+        return res.status(400).json({ ok: false, error: "Invalid code" });
+      }
+
       otpStore.delete(email);
-      return res.status(400).json({ ok: false, error: "code expired" });
+      return res.json({ ok: true, verified: true });
+    } catch (err) {
+      console.error("[otp/verify] ERROR:", err);
+      return res.status(500).json({ ok: false, error: "Verification failed" });
     }
+  }
+);
 
-    rec.tries++;
-    if (rec.tries > 5) {
-      otpStore.delete(email);
-      return res.status(429).json({ ok: false, error: "too many attempts" });
+/**
+ * POST /auth/totp/setup
+ * Body: { email, label?, issuer? }
+ * Returns { secret, otpauth } for use in authenticator apps (e.g., Google Authenticator).
+ */
+router.post(
+  "/totp/setup",
+  totpSetupValidator,
+  validate,
+  async (req, res) => {
+    try {
+      const { email, label = "PrivacyPulse", issuer = "PrivacyPulse" } = req.body;
+      const user = await findUserByEmail(email);
+      if (!user) return res.status(404).json({ ok: false, error: "User not found" });
+
+      const secret = authenticator.generateSecret();
+      const accountLabel = encodeURIComponent(`${label}:${email}`);
+      const encodedIssuer = encodeURIComponent(issuer);
+      const otpauth = `otpauth://totp/${accountLabel}?secret=${secret}&issuer=${encodedIssuer}`;
+
+      totpStore.set(email, { secret, enabled: false });
+
+      return res.json({ ok: true, secret, otpauth });
+    } catch (err) {
+      console.error("[totp/setup] ERROR:", err);
+      return res.status(500).json({ ok: false, error: "Failed to setup TOTP" });
     }
-
-    if (rec.code !== code) return res.status(401).json({ ok: false, error: "invalid code" });
-
-    // Success → issue/upgrade JWT (login via email)
-    const { rows } = await db.pool.query("SELECT * FROM users WHERE email=$1", [email]);
-    const user = rows[0];
-    if (!user) return res.status(404).json({ ok: false, error: "user not found" });
-
-    const ext_user_id = await ensureExtUserId(user);
-
-    const token = signToken({
-      userId: user.id,
-      ext_user_id,
-      username: user.username,
-      email: user.email,
-      mfa: { emailOtp: true },
-    });
-
-    otpStore.delete(email);
-    res.json({ ok: true, token, ext_user_id, user: { id: user.id, username: user.username, email: user.email } });
-  } catch (e) {
-    console.error("email-otp/verify error:", e);
-    res.status(500).json({ ok: false, error: "verification failed" });
   }
-});
+);
 
-// ====== TOTP (Google Authenticator) ==========================================
-// 1) Setup: generate secret + otpauth URL (QR content). Frontend renders the QR.
-router.post("/totp/setup", async (req, res) => {
-  try {
-    const email = String(req.body.email || "").trim().toLowerCase();
-    if (!email) return res.status(400).json({ ok: false, error: "email required" });
+/**
+ * POST /auth/totp/verify
+ * Body: { email, token }
+ * Verifies a TOTP token. If correct, enables TOTP for the user (in-memory here).
+ */
+router.post(
+  "/totp/verify",
+  totpVerifyValidator,
+  validate,
+  async (req, res) => {
+    try {
+      const { email, token } = req.body;
+      const entry = totpStore.get(email);
+      if (!entry || !entry.secret)
+        return res.status(400).json({ ok: false, error: "TOTP not initialized" });
 
-    const secret = authenticator.generateSecret();
-    const issuer = process.env.TOTP_ISSUER || "PrivacyPulse";
-    const otpauth = authenticator.keyuri(email, issuer, secret);
+      const isValid = authenticator.verify({ token, secret: entry.secret });
+      if (!isValid) return res.status(400).json({ ok: false, error: "Invalid token" });
 
-    totpStore.set(email, { secret, enabled: false });
-
-    res.json({ ok: true, otpauth, secret });
-  } catch (e) {
-    console.error("totp/setup error:", e);
-    res.status(500).json({ ok: false, error: "totp setup failed" });
-  }
-});
-
-// 2) Verify: user enters 6-digit code from their Authenticator app.
-router.post("/totp/verify", async (req, res) => {
-  try {
-    const email = String(req.body.email || "").trim().toLowerCase();
-    const token = String(req.body.token || "").trim();
-    const secret = String(req.body.secret || "").trim(); // from setup response
-
-    if (!email || !token || !secret) {
-      return res.status(400).json({ ok: false, error: "email, token, secret required" });
+      totpStore.set(email, { ...entry, enabled: true });
+      return res.json({ ok: true, enabled: true });
+    } catch (err) {
+      console.error("[totp/verify] ERROR:", err);
+      return res.status(500).json({ ok: false, error: "Verification failed" });
     }
-
-    const ok = authenticator.verify({ token, secret });
-    if (!ok) return res.status(401).json({ ok: false, error: "invalid code" });
-
-    // mark enabled in memory
-    totpStore.set(email, { secret, enabled: true });
-
-    // issue/upgrade JWT with mfa claim
-    const { rows } = await db.pool.query("SELECT * FROM users WHERE email=$1", [email]);
-    const user = rows[0];
-    if (!user) return res.status(404).json({ ok: false, error: "user not found" });
-
-    const ext_user_id = await ensureExtUserId(user);
-
-    const newJwt = signToken({
-      userId: user.id,
-      ext_user_id,
-      username: user.username,
-      email: user.email,
-      mfa: { totp: true },
-    });
-
-    res.json({ ok: true, token: newJwt, message: "TOTP verified" });
-  } catch (e) {
-    console.error("totp/verify error:", e);
-    res.status(500).json({ ok: false, error: "totp verification failed" });
   }
-});
-
-// (Optional) Login with TOTP after password step, if you want a separate endpoint
-router.post("/login/totp", async (req, res) => {
-  try {
-    const email = String(req.body.email || "").trim().toLowerCase();
-    const token = String(req.body.token || "").trim();
-    if (!email || !token) return res.status(400).json({ ok: false, error: "email and token required" });
-
-    const t = totpStore.get(email);
-    if (!t?.secret || !t.enabled) return res.status(400).json({ ok: false, error: "totp not set up" });
-
-    const ok = authenticator.verify({ token, secret: t.secret });
-    if (!ok) return res.status(401).json({ ok: false, error: "invalid code" });
-
-    const { rows } = await db.pool.query("SELECT * FROM users WHERE email=$1", [email]);
-    const user = rows[0];
-    if (!user) return res.status(404).json({ ok: false, error: "user not found" });
-
-    const ext_user_id = await ensureExtUserId(user);
-    const newJwt = signToken({
-      userId: user.id,
-      ext_user_id,
-      username: user.username,
-      email: user.email,
-      mfa: { totp: true },
-    });
-
-    res.json({ ok: true, token: newJwt });
-  } catch (e) {
-    console.error("login/totp error:", e);
-    res.status(500).json({ ok: false, error: "totp login failed" });
-  }
-});
+);
 
 module.exports = router;

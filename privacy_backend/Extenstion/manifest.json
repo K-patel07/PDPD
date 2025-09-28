@@ -3,6 +3,7 @@
   "name": "Privacy_Pulse",
   "version": "1.0.0",
   "description": "Counts ACTIVE time per website using Chrome Idle + tab/window focus; tracks visits & screen time.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqyqe4ukB5SRmxQ+/EA9AzcSQLFDDI8nbIVtN/6l4IDqzOEjdeE0MgVBCKMAJ+0YYWJL5v21m8B8W",
   "permissions": [
     "storage",
     "tabs",
