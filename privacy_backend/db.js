@@ -212,6 +212,20 @@ async function ensureTables(client) {
     );
   `);
 
+  // Clean up duplicate data before adding unique constraint
+  try {
+    await client.query(`
+      DELETE FROM public.site_visits 
+      WHERE id NOT IN (
+        SELECT MIN(id) 
+        FROM public.site_visits 
+        GROUP BY ext_user_id, hostname
+      );
+    `);
+  } catch (e) {
+    console.warn('Failed to clean up duplicates:', e.message);
+  }
+
   // Add unique constraint if it doesn't exist
   try {
     await client.query(`
