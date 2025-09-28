@@ -132,7 +132,19 @@
 
     const flags = getFlagsFromForm(form);
     const anyTrue = Object.values(flags).some(Boolean);
-    if (!anyTrue) return; // only if at least one flag is true
+    
+    console.log("[content] Form submission detected:", {
+      trigger,
+      hostname: location.hostname,
+      flags,
+      anyTrue,
+      form: form ? "found" : "not found"
+    });
+    
+    if (!anyTrue) {
+      console.log("[content] No form fields detected, skipping submission");
+      return; // only if at least one flag is true
+    }
 
     const submitted = toSubmittedFlags(flags);
     const payload = {
@@ -145,6 +157,7 @@
       trigger
     };
 
+    console.log("[content] Sending FORM_SUBMIT to background:", payload);
     sendBg("FORM_SUBMIT", payload);
   }
 

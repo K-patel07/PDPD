@@ -235,6 +235,14 @@ async function sendVisit(payload) {
 async function sendSubmit(payload) {
   const { ext_user_id, token } = await getIdentity();
 
+  console.log("[sendSubmit] Processing form submission:", {
+    hostname: payload.hostname,
+    hasToken: !!token,
+    ext_user_id,
+    fields_detected: payload.fields_detected,
+    submitted_keys: Object.keys(payload).filter(k => k.startsWith('submitted_'))
+  });
+
   // Guard: ensure at least one meaningful flag
   const fd = payload.fields_detected || {};
   const hasFD = fd && typeof fd === "object" && Object.values(fd).some(Boolean);
@@ -243,7 +251,13 @@ async function sendSubmit(payload) {
     "submitted_address","submitted_age","submitted_gender","submitted_country"
   ];
   const hasSubmitted = submittedKeys.some(k => !!payload[k]);
-  if (!hasFD && !hasSubmitted) return false;
+  
+  console.log("[sendSubmit] Form validation:", { hasFD, hasSubmitted, shouldProceed: hasFD || hasSubmitted });
+  
+  if (!hasFD && !hasSubmitted) {
+    console.log("[sendSubmit] No form fields detected, skipping");
+    return false;
+  }
 
   // Skip if no authentication token
   if (!token) {
@@ -255,8 +269,12 @@ async function sendSubmit(payload) {
   // Try up to 2 times for 502 errors
   let success = false;
   for (let attempt = 1; attempt <= 2; attempt++) {
+    console.log(`[sendSubmit] Attempt ${attempt} to send form data`);
     success = await postJSON("/api/track/submit", { ...payload, ext_user_id });
-    if (success) break;
+    if (success) {
+      console.log(`[sendSubmit] Successfully sent form submission on attempt ${attempt}`);
+      break;
+    }
     
     if (attempt < 2) {
       console.log(`[sendSubmit] Attempt ${attempt} failed, retrying...`);
@@ -265,6 +283,7 @@ async function sendSubmit(payload) {
   }
   
   if (!success) {
+    console.log("[sendSubmit] All attempts failed, queuing for offline retry");
     // Queue for retry when offline
     await addToOfflineQueue({
       path: "/api/track/submit",
@@ -434,17 +453,25 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       }
 
       if (msg?.type === "FORM_SUBMIT") {
+        console.log("[background] Received FORM_SUBMIT message:", msg);
         const data = msg.data || msg.payload || {};
-        if (!data?.hostname) { sendResponse({ ok: false, error: "hostname missing" }); return; }
+        if (!data?.hostname) { 
+          console.log("[background] FORM_SUBMIT missing hostname");
+          sendResponse({ ok: false, error: "hostname missing" }); 
+          return; 
+        }
 
         const { token } = await getIdentity();
         if (!token) {
+          console.log("[background] FORM_SUBMIT no authentication token");
           sendResponse({ ok: false, error: "Authentication required. Please log in via the extension options page." });
           return;
         }
 
+        console.log("[background] Processing FORM_SUBMIT for hostname:", data.hostname);
         const screen_time_seconds = await estimateScreenTimeFor(data.hostname);
         const ok = await sendSubmit({ ...data, screen_time_seconds });
+        console.log("[background] FORM_SUBMIT result:", ok);
         sendResponse({ ok });
         return;
       }
