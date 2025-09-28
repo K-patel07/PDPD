@@ -117,8 +117,7 @@ app.use(
   })
 );
 
-// Explicitly handle OPTIONS requests for all routes
-app.options('/*', cors());
+// CORS middleware already handles OPTIONS requests
 
 /* ---------------------------- Rate Limits ---------------------------- */
 // Global limiter
