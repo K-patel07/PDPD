@@ -8,8 +8,8 @@
 
 .category-scroll {
   --chip-gap: 20px;                /* space between icon & name */
-  --chip-pad-y: 10px;              /* vertical padding */
-  --chip-pad-x: 14px;              /* horizontal padding */
+  --chip-pad-y: 13px;               /* vertical padding */
+  --chip-pad-x: 10px;              /* horizontal padding */
   --chip-radius: 12px;             /* pill corners of the whole chip */
 
   --icon-tile-size: 52px;          /* square behind the icon */
@@ -19,7 +19,7 @@
   --icon-tile-bg: rgba(255,255,255,.65);
   --icon-tile-border: rgba(2,6,23,.08);
 
-  --category-font-size: 1rem;      /* label text size */
+  --category-font-size: 1.2rem;    /* label text size */
   --category-font-weight: 600;     /* label weight */
 
   /* Fallback hover shadow if you didn't define one globally */
@@ -204,7 +204,7 @@
   .category-scroll .category .label,
   .category-scroll .category .category-label,
   .category-scroll .category > :not(:first-child) {
-    font-size: .92rem;
+    font-size: 1.1rem;
   }
 }
 

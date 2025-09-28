@@ -20,10 +20,11 @@
   --greet-art-offset-right: 0px !important;
 }
 
-/* remove the overhang-based auto spacer (since there’s no art now) */
+/* remove the overhang-based auto spacer (since there's no art now) */
 .greet-card, .welcome-card, .user-welcome-card{
   margin-top: 40px !important;
   margin-bottom: 40px !important; /* Space between welcome card and charts */
+  margin-left: 40px !important; /* Left spacing for welcome card */
 }
 
 /* Ensure our card’s own gradient shows (no dimming mask) */

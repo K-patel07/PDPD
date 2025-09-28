@@ -329,7 +329,7 @@ body::before{
   width: 32px; height: 32px;
 }
 .category-scroll .category-label {
-  font-size: 12px; font-weight: 600; text-align: center; line-height: 1.2;
+  font-size: 14px; font-weight: 600; text-align: center; line-height: 1.2;
   transition: color .3s ease; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
   color: var(--cat-icon-color, var(--text));
 }
@@ -628,7 +628,7 @@ main,
    ========================================================= */
 @media (max-width: 900px) {
   .search input { min-width: 120px; }
-  .category { min-width: 140px; }
+  .category { min-width: 100px; }
   .chart-grid { grid-template-columns: 1fr; }
   .chart-big { height: 240px; }
   .chart-grid > * { min-height: auto; }
