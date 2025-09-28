@@ -22,6 +22,7 @@
 
 /* remove the overhang-based auto spacer (since there’s no art now) */
 .greet-card, .welcome-card, .user-welcome-card{
+  margin-top: 60px !important;
   margin-bottom: 40px !important; /* Space between welcome card and charts */
 }
 

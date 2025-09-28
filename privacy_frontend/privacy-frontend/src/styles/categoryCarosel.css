@@ -44,7 +44,7 @@
   padding: var(--chip-pad-y) var(--chip-pad-x);
   min-height: calc(var(--icon-tile-size) + 8px); /* fits bigger tiles */
   border-radius: var(--chip-radius);
-  background: linear-gradient(70deg, rgba(73, 74, 148, 0.467), rgba(56,150,174,0.9)) !important;
+  background: linear-gradient(135deg, rgba(73, 74, 148, 0.9), rgba(56,150,174,0.9)) !important;
   border: 1px solid var(--stroke);
   box-shadow: var(--shadow-sm);
   line-height: 1.1;
@@ -221,7 +221,7 @@
   --arrow-border: rgba(0, 0, 0, 0.1);        /* tile border */
   --arrow-icon: #2a3a4b;                   /* chevron color */
   --arrow-shadow: 0 6px 18px rgba(2,6,23,.12);  /* drop shadow */
-  --background: linear-gradient(70deg, rgba(73, 74, 148, 0.467), rgba(56,150,174,0.9)) !important;
+  --background: linear-gradient(135deg, rgba(73, 74, 148, 0.9), rgba(56,150,174,0.9)) !important;
 }
 
 .theme-dark .category-scroll {
@@ -265,7 +265,7 @@
 .category-scroll .category-item,
 .category-scroll .category-pill,
 .category-scroll .chip {
-  background: linear-gradient(70deg, rgba(73, 74, 148, 0.467), rgba(56,150,174,0.9)) !important;
+  background: linear-gradient(135deg, rgba(73, 74, 148, 0.9), rgba(56,150,174,0.9)) !important;
   border-color: var(--stroke);
   color: var(--cat-icon-color, var(--text)) !important; /* text color */
 }
@@ -279,7 +279,7 @@
 .category-scroll .category-pill:focus-visible,
 .category-scroll .chip:hover,
 .category-scroll .chip:focus-visible {
-  background: linear-gradient(70deg, rgba(73, 74, 148, 0.467), rgba(56,150,174,0.9)) !important;
+  background: linear-gradient(135deg, rgba(73, 74, 148, 0.9), rgba(56,150,174,0.9)) !important;
   border-color: var(--accent);
   color: var(--cat-icon-color, var(--text)) !important;
 }
