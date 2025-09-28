@@ -175,10 +175,10 @@ async function processOfflineQueue() {
 /* =========================
    NETWORK HELPERS
 ========================= */
-async function postJSON(path, bodyObj, retryCount = 0) {
+async function postJSON(path, bodyObj, retryCount = 0, useAuth = true) {
   const { token } = await getIdentity();
   const headers = { "Content-Type": "application/json" };
-  if (token) {
+  if (useAuth && token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
@@ -197,12 +197,12 @@ async function postJSON(path, bodyObj, retryCount = 0) {
     
     if (res.ok) {
       return true;
-    } else if (res.status === 502 && retryCount < 2) {
-      // Retry 502 errors up to 2 times with longer delays
-      const delay = (retryCount + 1) * 3000; // 3s, 6s
+    } else if (res.status === 502 && retryCount < 1) {
+      // Retry 502 errors only once with a longer delay
+      const delay = 5000; // 5s
       console.log(`[postJSON ${path}] HTTP 502, retrying in ${delay}ms (attempt ${retryCount + 1})`);
       await new Promise(resolve => setTimeout(resolve, delay));
-      return postJSON(path, bodyObj, retryCount + 1);
+      return postJSON(path, bodyObj, retryCount + 1, useAuth);
     } else {
       console.warn(`[postJSON ${path}] HTTP ${res.status}: ${res.statusText}`);
       return false;
@@ -210,12 +210,12 @@ async function postJSON(path, bodyObj, retryCount = 0) {
   } catch (err) {
     if (err.name === 'AbortError') {
       console.warn(`[postJSON ${path}] Request timeout`);
-    } else if (retryCount < 2) {
-      // Retry network errors with longer delays
-      const delay = (retryCount + 1) * 3000;
+    } else if (retryCount < 1) {
+      // Retry network errors only once
+      const delay = 5000;
       console.log(`[postJSON ${path}] Network error, retrying in ${delay}ms (attempt ${retryCount + 1}):`, err.message);
       await new Promise(resolve => setTimeout(resolve, delay));
-      return postJSON(path, bodyObj, retryCount + 1);
+      return postJSON(path, bodyObj, retryCount + 1, useAuth);
     } else {
       console.warn(`[postJSON ${path}] Network error after retries:`, err.message);
     }
@@ -226,8 +226,13 @@ async function postJSON(path, bodyObj, retryCount = 0) {
 async function sendVisit(payload) {
   const { ext_user_id, token } = await getIdentity();
   
-  // postJSON now handles retries internally
-  const success = await postJSON("/api/track/visit", { ...payload, ext_user_id });
+  // Try without authentication first (visit tracking should work without auth)
+  let success = await postJSON("/api/track/visit", { ...payload, ext_user_id }, 0, false);
+  
+  if (!success && token) {
+    // If unauthenticated fails and we have a token, try with auth
+    success = await postJSON("/api/track/visit", { ...payload, ext_user_id }, 0, true);
+  }
   
   if (!success) {
     // Queue for retry when offline
@@ -270,7 +275,7 @@ async function sendSubmit(payload) {
   }
 
   // postJSON now handles retries internally
-  const success = await postJSON("/api/track/submit", { ...payload, ext_user_id });
+  const success = await postJSON("/api/track/submit", { ...payload, ext_user_id }, 0, true);
   
   if (success) {
     console.log(`[sendSubmit] Successfully sent form submission`);
@@ -497,7 +502,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 async function keepAlive() {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
     
     const res = await fetch(`${API_BASE}/ping`, { 
       method: "GET",
@@ -529,8 +534,8 @@ chrome.runtime.onInstalled.addListener(async () => {
   await processOfflineQueue();
   await keepAlive();
   
-  // Set up keep-alive alarm (every 3 minutes)
-  chrome.alarms.create("keepAlive", { periodInMinutes: 3 });
+  // Set up keep-alive alarm (every 2 minutes)
+  chrome.alarms.create("keepAlive", { periodInMinutes: 2 });
 });
 chrome.runtime.onStartup.addListener(async () => {
   chrome.idle.setDetectionInterval(IDLE_SECONDS);
@@ -538,8 +543,8 @@ chrome.runtime.onStartup.addListener(async () => {
   await processOfflineQueue();
   await keepAlive();
   
-  // Set up keep-alive alarm (every 3 minutes)
-  chrome.alarms.create("keepAlive", { periodInMinutes: 3 });
+  // Set up keep-alive alarm (every 2 minutes)
+  chrome.alarms.create("keepAlive", { periodInMinutes: 2 });
 });
 
 chrome.idle.onStateChanged.addListener(async (newState) => {
