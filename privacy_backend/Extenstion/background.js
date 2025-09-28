@@ -174,11 +174,17 @@ async function postJSON(path, bodyObj) {
   if (token) headers["Authorization"] = `Bearer ${token}`;
   
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
     const res = await fetch(`${API_BASE}${path}`, {
       method: "POST",
       headers,
       body: JSON.stringify(bodyObj),
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
     
     if (res.ok) {
       return true;
@@ -187,14 +193,29 @@ async function postJSON(path, bodyObj) {
       return false;
     }
   } catch (err) {
-    console.warn(`[postJSON ${path}] Network error:`, err.message);
+    if (err.name === 'AbortError') {
+      console.warn(`[postJSON ${path}] Request timeout`);
+    } else {
+      console.warn(`[postJSON ${path}] Network error:`, err.message);
+    }
     return false;
   }
 }
 
 async function sendVisit(payload) {
   const { ext_user_id } = await getIdentity();
-  const success = await postJSON("/api/track/visit", { ...payload, ext_user_id });
+  
+  // Try up to 2 times for 502 errors
+  let success = false;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    success = await postJSON("/api/track/visit", { ...payload, ext_user_id });
+    if (success) break;
+    
+    if (attempt < 2) {
+      console.log(`[sendVisit] Attempt ${attempt} failed, retrying...`);
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+    }
+  }
   
   if (!success) {
     // Queue for retry when offline
@@ -226,7 +247,17 @@ async function sendSubmit(payload) {
     return false;
   }
 
-  const success = await postJSON("/api/track/submit", { ...payload, ext_user_id });
+  // Try up to 2 times for 502 errors
+  let success = false;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    success = await postJSON("/api/track/submit", { ...payload, ext_user_id });
+    if (success) break;
+    
+    if (attempt < 2) {
+      console.log(`[sendSubmit] Attempt ${attempt} failed, retrying...`);
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+    }
+  }
   
   if (!success) {
     // Queue for retry when offline
