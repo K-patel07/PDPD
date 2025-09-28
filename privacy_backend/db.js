@@ -7,22 +7,27 @@ const { classifyPhishing } = require("./services/phishingModel");
 const { bandFromPercent } = require("./services/riskHelper");
 
 /* ------------------------------ Pool ------------------------------ */
-const usingUrl = !!process.env.DATABASE_URL;
-const pool = new Pool(
-  usingUrl
-    ? {
-        connectionString: process.env.DATABASE_URL,
-        ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
-      }
-    : {
-        host: process.env.PGHOST || "localhost",
-        port: Number(process.env.PGPORT || 5432),
-        database: process.env.PGDATABASE,
-        user: process.env.PGUSER,
-        password: process.env.PGPASSWORD,
-        ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
-      }
-);
+/** prefer DATABASE_URL; fall back to PG* vars; optional SSL via DB_SSL=true */
+const hasUrl =
+  typeof process.env.DATABASE_URL === "string" &&
+  /^postgres(ql)?:\/\//i.test(process.env.DATABASE_URL.trim());
+
+const wantSSL = String(process.env.DB_SSL || "").toLowerCase() === "true";
+const sslOption = wantSSL ? { rejectUnauthorized: false } : false;
+
+const pool = hasUrl
+  ? new Pool({
+      connectionString: process.env.DATABASE_URL.trim(),
+      ssl: sslOption,
+    })
+  : new Pool({
+      host: process.env.PGHOST || "localhost",
+      user: process.env.PGUSER || "postgres",
+      password: process.env.PGPASSWORD || undefined,
+      database: process.env.PGDATABASE || "pdpd",
+      port: Number(process.env.PGPORT || 5432),
+      ssl: sslOption,
+    });
 
 // Force the schema so reads/writes go to public
 pool
@@ -56,18 +61,14 @@ function normalizeHostname(host) {
     if (urlHost.startsWith("www.")) urlHost = urlHost.slice(4);
     const parsed = psl.parse(urlHost);
 
-    // 🚧 Guard: require a real registrable domain (has a dot)
-    if (!parsed.domain || !parsed.domain.includes(".")) {
-      // e.g., "instagram" or "www.instagram" (no TLD) → treat as unusable
-      return "";
-    }
+    // require a registrable domain (has a dot)
+    if (!parsed.domain || !parsed.domain.includes(".")) return "";
 
     return parsed.domain; // collapses subdomains
   } catch {
     return String(host || "").toLowerCase();
   }
 }
-
 
 function coerceDate(v) {
   if (!v) return null;
@@ -126,7 +127,6 @@ async function ensureTables(client) {
     );
   `);
 
-  // Keep flexible, add columns if missing
   await client.query(`
     CREATE TABLE IF NOT EXISTS public.site_visits (
       id SERIAL PRIMARY KEY,
@@ -139,7 +139,7 @@ async function ensureTables(client) {
       category_method TEXT,
       event_type TEXT NOT NULL DEFAULT 'visit',
       fields_detected JSONB NOT NULL DEFAULT '{}'::jsonb,
-      fields TEXT[] NOT NULL DEFAULT '{}', -- legacy; harmless
+      fields TEXT[] NOT NULL DEFAULT '{}', -- legacy
       last_input_time TIMESTAMPTZ NULL,
       screen_time_seconds INTEGER NOT NULL DEFAULT 0,
       ext_user_id TEXT,
@@ -148,8 +148,7 @@ async function ensureTables(client) {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       visit_count INTEGER NOT NULL DEFAULT 1,
       last_visited TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      visit_date DATE -- legacy; not used by unique anymore
-      -- unique constraint handled below to allow migrations
+      visit_date DATE
     );
   `);
 
@@ -219,12 +218,9 @@ async function ensureTables(client) {
   `);
 }
 
-/**
- * Flatten duplicates of (ext_user_id, hostname) into a single keeper row.
- * Sums visit_count & screen_time_seconds, keeps latest text fields, preserves FKs.
- */
+/** De-dupe helper used by ensureVisitsUniqueKey */
 async function flattenSiteVisits(client) {
-  // quick check: are there duplicates?
+  // duplicates?
   const dup = await client.query(`
     SELECT COUNT(*)::int AS dups
     FROM (
@@ -238,14 +234,12 @@ async function flattenSiteVisits(client) {
   if (!need) return;
 
   await client.query(`
-    -- pick a keeper row per (user, host) (latest by last_visited/created_at)
     CREATE TEMP TABLE sv_keep ON COMMIT DROP AS
     SELECT DISTINCT ON (ext_user_id, hostname)
       id AS keep_id, ext_user_id, hostname
     FROM public.site_visits
     ORDER BY ext_user_id, hostname, last_visited DESC NULLS LAST, created_at DESC NULLS LAST, id DESC;
 
-    -- compute aggregates
     CREATE TEMP TABLE sv_agg ON COMMIT DROP AS
     SELECT
       ext_user_id,
@@ -263,7 +257,6 @@ async function flattenSiteVisits(client) {
     FROM public.site_visits
     GROUP BY ext_user_id, hostname;
 
-    -- rollup into keeper
     UPDATE public.site_visits s
        SET visit_count         = a.total_visits,
            screen_time_seconds = a.total_st,
@@ -279,7 +272,6 @@ async function flattenSiteVisits(client) {
       JOIN sv_agg a USING (ext_user_id, hostname)
      WHERE s.id = k.keep_id;
 
-    -- repoint field_submissions FK to keeper
     UPDATE public.field_submissions fs
        SET site_visit_id = k.keep_id
       FROM public.site_visits s
@@ -287,7 +279,6 @@ async function flattenSiteVisits(client) {
      WHERE fs.site_visit_id = s.id
        AND s.id <> k.keep_id;
 
-    -- drop non-keepers
     DELETE FROM public.site_visits s
      USING sv_keep k
      WHERE s.ext_user_id = k.ext_user_id
@@ -296,21 +287,13 @@ async function flattenSiteVisits(client) {
   `);
 }
 
-/**
- * Ensure unique key is (ext_user_id, hostname).
- * Drops legacy constraint if present and creates the new one safely.
- */
 async function ensureVisitsUniqueKey(client) {
-  // Make sure required columns exist (idempotent)
-  // visit_date is legacy; allow NULL and set a default so inserts that omit it never fail
-await client.query(`
-  ALTER TABLE public.site_visits
-    ALTER COLUMN visit_date DROP NOT NULL,
-    ALTER COLUMN visit_date SET DEFAULT (NOW() AT TIME ZONE 'Australia/Melbourne')::date;
-`);
+  await client.query(`
+    ALTER TABLE public.site_visits
+      ALTER COLUMN visit_date DROP NOT NULL,
+      ALTER COLUMN visit_date SET DEFAULT (NOW() AT TIME ZONE 'Australia/Melbourne')::date;
+  `);
 
-
-  // Drop legacy unique if exists
   await client.query(`
     DO $$
     BEGIN
@@ -320,10 +303,8 @@ await client.query(`
     END$$;
   `);
 
-  // Dedupe before adding the new unique
   await flattenSiteVisits(client);
 
-  // Add the new unique if not exists
   await client.query(`
     DO $$
     BEGIN
@@ -361,14 +342,13 @@ async function ensureWebsiteId({ hostname, client: c }) {
     const h = String(hostname || "").toLowerCase();
     if (!h) throw new Error("ensureWebsiteId: hostname missing");
     const { rows } = await client.query(
-  `INSERT INTO websites (hostname)
-   VALUES ($1)
-   ON CONFLICT ((lower(hostname))) DO UPDATE
-     SET hostname = EXCLUDED.hostname
-   RETURNING id AS website_id`,
-  [h]
-);
-
+      `INSERT INTO websites (hostname)
+       VALUES ($1)
+       ON CONFLICT ((lower(hostname))) DO UPDATE
+         SET hostname = EXCLUDED.hostname
+       RETURNING id AS website_id`,
+      [h]
+    );
     return rows[0].website_id;
   } finally {
     if (own) client.release();
@@ -376,10 +356,6 @@ async function ensureWebsiteId({ hostname, client: c }) {
 }
 
 /* ------------------------------ Visits ----------------------------- */
-/**
- * Upsert a visit for (ext_user_id, hostname), incrementing visit_count on real revisits.
- * Always accumulates screen_time_seconds and refreshes last_visited & latest details.
- */
 async function insertVisit(payload = {}) {
   const client = await pool.connect();
   try {
@@ -487,13 +463,13 @@ async function insertVisit(payload = {}) {
 async function insertFieldSubmission(data) {
   const hostname = normalizeHostname(data.hostname);
   const { rows: wrows } = await pool.query(
-  `INSERT INTO public.websites (hostname)
-   VALUES ($1)
-   ON CONFLICT ((lower(hostname))) DO UPDATE
-     SET hostname = EXCLUDED.hostname
-   RETURNING id`,
-  [normalizeHostname(data.hostname)]
-);
+    `INSERT INTO public.websites (hostname)
+     VALUES ($1)
+     ON CONFLICT ((lower(hostname))) DO UPDATE
+       SET hostname = EXCLUDED.hostname
+     RETURNING id`,
+    [normalizeHostname(data.hostname)]
+  );
 
   const websiteId = wrows[0].id;
 

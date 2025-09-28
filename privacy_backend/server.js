@@ -33,6 +33,17 @@ const HF_MODEL   = process.env.HF_MODEL || "ealvaradob/bert-finetuned-phishing";
 
 const app = express();
 
+const db = require("./db");
+app.get("/health/db", async (_req, res) => {
+  try {
+    const { rows } = await db.query("SELECT 1 as ok");
+    res.json({ ok: true, rows });
+  } catch (e) {
+    console.error("[DB health] ERROR:", e);
+    res.status(500).json({ ok: false, error: String(e) });
+  }
+});
+
 /* --------------------------- Hardening/Base -------------------------- */
 app.disable("x-powered-by");
 app.set("etag", false); // avoid 304 confusion on API clients

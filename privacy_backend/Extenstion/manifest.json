@@ -3,29 +3,36 @@
   "name": "Privacy_Pulse",
   "version": "1.0.0",
   "description": "Counts ACTIVE time per website using Chrome Idle + tab/window focus; tracks visits & screen time.",
+
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqyqe4ukB5SRmxQ+/EA9AzcSQLFDDI8nbIVtN/6l4IDqzOEjdeE0MgVBCKMAJ+0YYWJL5v21m8B8W",
+
   "permissions": [
     "storage",
     "tabs",
     "windows",
     "idle",
     "alarms",
-    "webRequest",
-    "webNavigation",
-    "activeTab"
+    "webRequest",        
+    "activeTab",
+    "webNavigation"      
   ],
+
+  
   "host_permissions": [
-    "<all_urls>",
-    "http://localhost:3000/*"
+    "<all_urls>",                              
+    "https://your-backend.onrender.com/*"        
   ],
+
   "action": {
     "default_title": "PDPD",
     "default_popup": "popup.html"
   },
+
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
+
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
@@ -34,10 +41,11 @@
       "all_frames": true
     },
     {
-      "matches": ["http://localhost:5173/*","https://your-dashboard.example.com/*"],
+      
+      "matches": [
+        "https://your-frontend.onrender.com/*"  
       "js": ["content-bridge.js"],
       "run_at": "document_start"
     }
   ]
 }
-
