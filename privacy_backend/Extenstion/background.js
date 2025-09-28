@@ -45,11 +45,15 @@ async function getExtUserId() {
 }
 
 async function getIdentity() {
-  const [ext_user_id, { token, auth_token }] = await Promise.all([
+  const [ext_user_id, storage] = await Promise.all([
     getExtUserId(),
     chrome.storage.local.get(["token", "auth_token"])
   ]);
-  return { ext_user_id, token: auth_token || token };
+  
+  const token = storage.auth_token || storage.token;
+  console.log('[getIdentity] Retrieved token:', token ? 'SET' : 'NOT_SET');
+  
+  return { ext_user_id, token };
 }
 
 function isHttpUrl(url = "") {
@@ -244,6 +248,7 @@ async function sendSubmit(payload) {
   // Skip if no authentication token
   if (!token) {
     console.warn("[sendSubmit] No authentication token, skipping submit");
+    console.log("[sendSubmit] To enable form tracking, please log in via the extension options page");
     return false;
   }
 
@@ -431,6 +436,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       if (msg?.type === "FORM_SUBMIT") {
         const data = msg.data || msg.payload || {};
         if (!data?.hostname) { sendResponse({ ok: false, error: "hostname missing" }); return; }
+
+        const { token } = await getIdentity();
+        if (!token) {
+          sendResponse({ ok: false, error: "Authentication required. Please log in via the extension options page." });
+          return;
+        }
 
         const screen_time_seconds = await estimateScreenTimeFor(data.hostname);
         const ok = await sendSubmit({ ...data, screen_time_seconds });

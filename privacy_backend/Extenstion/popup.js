@@ -126,12 +126,30 @@ async function init(){
   const hostLabel=document.getElementById("host-label");
   const timeEl   =document.getElementById("screen-time");
   const goBtn    =document.getElementById("go-dashboard");
+  const authStatus = document.getElementById("auth-status");
+  const authMessage = document.getElementById("auth-message");
+  const openOptionsBtn = document.getElementById("open-options");
 
   const [{ ext_user_id, token, dashboard_url }, { hostname }] =
     await Promise.all([getIdentity(), getActiveTabInfo()]);
 
   if (hostLabel) hostLabel.textContent = hostname || "Unknown site";
   if (goBtn && dashboard_url) goBtn.href = dashboard_url;
+
+  // Show authentication status
+  if (!token) {
+    if (authStatus) authStatus.style.display = "block";
+    if (authMessage) authMessage.textContent = "Please log in to enable form tracking";
+  } else {
+    if (authStatus) authStatus.style.display = "none";
+  }
+
+  // Open options page button
+  if (openOptionsBtn) {
+    openOptionsBtn.addEventListener('click', () => {
+      chrome.runtime.openOptionsPage();
+    });
+  }
 
   if (!ext_user_id || !hostname){
     if (timeEl) timeEl.textContent="—";
