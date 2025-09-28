@@ -101,51 +101,50 @@ function sanitizeUser(u) {
  * POST /auth/register
  * Body: { email, username, password }
  */
-router.post(
-  "/register",
-  registerValidator,
-  validate,
-  async (req, res) => {
-    try {
-      const { email, username, password } = req.body;
+async function handleRegister(req, res) {
+  try {
+    const { email, username, password } = req.body;
 
-      const [existingEmail, existingUsername] = await Promise.all([
-        findUserByEmail(email),
-        findUserByUsername(username),
-      ]);
-      if (existingEmail)
-        return res.status(409).json({ ok: false, error: "Email already in use" });
-      if (existingUsername)
-        return res.status(409).json({ ok: false, error: "Username already taken" });
+    const [existingEmail, existingUsername] = await Promise.all([
+      findUserByEmail(email),
+      findUserByUsername(username),
+    ]);
+    if (existingEmail)
+      return res.status(409).json({ ok: false, error: "Email already in use" });
+    if (existingUsername)
+      return res.status(409).json({ ok: false, error: "Username already taken" });
 
-      const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-      const extUserId = randomUUID();
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    const extUserId = randomUUID();
 
-      const user = await createUser({
-        email,
-        username,
-        passwordHash,
-        extUserId,
-      });
+    const user = await createUser({
+      email,
+      username,
+      passwordHash,
+      extUserId,
+    });
 
-      const token = signToken({
-        sub: user.id,
-        email: user.email,
-        username: user.username,
-        ext_user_id: user.ext_user_id,
-      });
+    const token = signToken({
+      sub: user.id,
+      email: user.email,
+      username: user.username,
+      ext_user_id: user.ext_user_id,
+    });
 
-      return res.status(201).json({
-        ok: true,
-        token,
-        user,
-      });
-    } catch (err) {
-      console.error("[register] ERROR:", err);
-      return res.status(500).json({ ok: false, error: "Internal server error" });
-    }
+    return res.status(201).json({
+      ok: true,
+      token,
+      user,
+    });
+  } catch (err) {
+    console.error("[register] ERROR:", err);
+    return res.status(500).json({ ok: false, error: "Internal server error" });
   }
-);
+}
+
+router.post("/register", registerValidator, validate, handleRegister);
+// Backwards-compatible alias
+router.post("/signup", registerValidator, validate, handleRegister);
 
 /**
  * POST /auth/login
@@ -190,75 +189,72 @@ router.post(
  * Body: { email }
  * Sends a one-time 6-digit code via email. Expires in 10 minutes.
  */
-router.post(
-  "/otp/send",
-  otpSendValidator,
-  validate,
-  async (req, res) => {
-    try {
-      const { email } = req.body;
-      const user = await findUserByEmail(email);
-      if (!user) return res.status(404).json({ ok: false, error: "User not found" });
+async function handleOtpSend(req, res) {
+  try {
+    const { email } = req.body;
+    const user = await findUserByEmail(email);
+    if (!user) return res.status(404).json({ ok: false, error: "User not found" });
 
-      const code = String(Math.floor(100000 + Math.random() * 900000));
-      const expiresAt = Date.now() + OTP_WINDOW_MS;
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = Date.now() + OTP_WINDOW_MS;
 
-      otpStore.set(email, { code, expiresAt, tries: 0 });
+    otpStore.set(email, { code, expiresAt, tries: 0 });
 
-      const info = await mailer.sendMail({
-        to: email,
-        from: process.env.MAIL_FROM || "no-reply@yourapp.local",
-        subject: "Your verification code",
-        text: `Your verification code is ${code}. It expires in 10 minutes.`,
-      });
+    const info = await mailer.sendMail({
+      to: email,
+      from: process.env.MAIL_FROM || "no-reply@yourapp.local",
+      subject: "Your verification code",
+      text: `Your verification code is ${code}. It expires in 10 minutes.`,
+    });
 
-      // If using jsonTransport, info.message will be a JSON string. It’s fine in dev.
-      return res.json({ ok: true, sent: !!info, hint: process.env.SMTP_HOST ? undefined : "dev-json-transport" });
-    } catch (err) {
-      console.error("[otp/send] ERROR:", err);
-      return res.status(500).json({ ok: false, error: "Failed to send code" });
-    }
+    return res.json({ ok: true, sent: !!info, hint: process.env.SMTP_HOST ? undefined : "dev-json-transport" });
+  } catch (err) {
+    console.error("[otp/send] ERROR:", err);
+    return res.status(500).json({ ok: false, error: "Failed to send code" });
   }
-);
+}
+
+router.post("/otp/send", otpSendValidator, validate, handleOtpSend);
+// Backwards-compatible alias
+router.post("/email-otp/request", otpSendValidator, validate, handleOtpSend);
 
 /**
  * POST /auth/otp/verify
  * Body: { email, code }
  */
-router.post(
-  "/otp/verify",
-  otpVerifyValidator,
-  validate,
-  async (req, res) => {
-    try {
-      const { email, code } = req.body;
-      const rec = otpStore.get(email);
-      if (!rec) return res.status(400).json({ ok: false, error: "No active code" });
+async function handleOtpVerify(req, res) {
+  try {
+    const { email, code } = req.body;
+    const rec = otpStore.get(email);
+    if (!rec) return res.status(400).json({ ok: false, error: "No active code" });
 
-      if (Date.now() > rec.expiresAt) {
-        otpStore.delete(email);
-        return res.status(400).json({ ok: false, error: "Code expired" });
-      }
-
-      if (rec.tries >= OTP_MAX_TRIES) {
-        otpStore.delete(email);
-        return res.status(429).json({ ok: false, error: "Too many attempts" });
-      }
-
-      rec.tries += 1;
-
-      if (rec.code !== code) {
-        return res.status(400).json({ ok: false, error: "Invalid code" });
-      }
-
+    if (Date.now() > rec.expiresAt) {
       otpStore.delete(email);
-      return res.json({ ok: true, verified: true });
-    } catch (err) {
-      console.error("[otp/verify] ERROR:", err);
-      return res.status(500).json({ ok: false, error: "Verification failed" });
+      return res.status(400).json({ ok: false, error: "Code expired" });
     }
+
+    if (rec.tries >= OTP_MAX_TRIES) {
+      otpStore.delete(email);
+      return res.status(429).json({ ok: false, error: "Too many attempts" });
+    }
+
+    rec.tries += 1;
+
+    if (rec.code !== code) {
+      return res.status(400).json({ ok: false, error: "Invalid code" });
+    }
+
+    otpStore.delete(email);
+    return res.json({ ok: true, verified: true });
+  } catch (err) {
+    console.error("[otp/verify] ERROR:", err);
+    return res.status(500).json({ ok: false, error: "Verification failed" });
   }
-);
+}
+
+router.post("/otp/verify", otpVerifyValidator, validate, handleOtpVerify);
+// Backwards-compatible alias
+router.post("/email-otp/verify", otpVerifyValidator, validate, handleOtpVerify);
 
 /**
  * POST /auth/totp/setup
