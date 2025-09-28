@@ -241,6 +241,19 @@ async function ensureTables(client) {
   `);
 
   await client.query(`
+    CREATE TABLE IF NOT EXISTS public.phishing_cache (
+      id SERIAL PRIMARY KEY,
+      hostname TEXT NOT NULL,
+      phishing_score NUMERIC(5,4) NOT NULL,
+      label TEXT NOT NULL,
+      model TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT ux_phishing_hostname UNIQUE (hostname)
+    );
+  `);
+
+  await client.query(`
     CREATE TABLE IF NOT EXISTS public.field_submissions (
       id SERIAL PRIMARY KEY,
       hostname TEXT NOT NULL,
@@ -642,6 +655,31 @@ async function getRiskByHostname(hostname) {
   return rows[0] || null;
 }
 
+/* ---------------------- Phishing Cache Functions --------------------------- */
+async function getCachedPhishingScore(hostname) {
+  const { rows } = await pool.query(
+    `SELECT phishing_score, label, model, updated_at 
+     FROM phishing_cache 
+     WHERE hostname = $1 AND updated_at > NOW() - INTERVAL '24 hours'`,
+    [hostname]
+  );
+  return rows[0] || null;
+}
+
+async function cachePhishingScore(hostname, score, label, model) {
+  await pool.query(
+    `INSERT INTO phishing_cache (hostname, phishing_score, label, model, updated_at)
+     VALUES ($1, $2, $3, $4, NOW())
+     ON CONFLICT (hostname) 
+     DO UPDATE SET 
+       phishing_score = EXCLUDED.phishing_score,
+       label = EXCLUDED.label,
+       model = EXCLUDED.model,
+       updated_at = NOW()`,
+    [hostname, score, label, model]
+  );
+}
+
 /* ---------------------- NEW Risk updater --------------------------- */
 async function updateRiskForUserWebsite(ext_user_id, hostname) {
   const websiteId = await ensureWebsiteId({ hostname: normalizeHostname(hostname) });
@@ -659,12 +697,22 @@ async function updateRiskForUserWebsite(ext_user_id, hostname) {
   const count = rows[0]?.submitted_fields ?? 0;
   const data_risk = Math.min(1, count / 10.0);
 
-  // phishing via classifier (0–1)
+  // phishing via classifier with caching (0–1)
   let phishing_risk = 0;
   try {
-    const res = await classifyPhishing(hostname);
-    const s = Number(res?.phishingScore ?? res?.score ?? 0);
-    phishing_risk = Math.max(0, Math.min(1, isFinite(s) ? s : 0));
+    // Check cache first
+    const cached = await getCachedPhishingScore(hostname);
+    if (cached) {
+      phishing_risk = Number(cached.phishing_score);
+    } else {
+      // Get fresh score and cache it
+      const res = await classifyPhishing(hostname);
+      const s = Number(res?.phishingScore ?? res?.score ?? 0);
+      phishing_risk = Math.max(0, Math.min(1, isFinite(s) ? s : 0));
+      
+      // Cache the result
+      await cachePhishingScore(hostname, phishing_risk, res?.label || 'unknown', res?.model || 'unknown');
+    }
   } catch (e) {
     console.warn("[updateRiskForUserWebsite] phishing fallback 0:", e.message);
   }
@@ -695,6 +743,8 @@ module.exports = {
   upsertRiskAssessment,
   getRiskByHostname,
   updateRiskForUserWebsite,
+  getCachedPhishingScore,
+  cachePhishingScore,
   coerceDate,
   normalizeHostname,
 };

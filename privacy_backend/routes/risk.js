@@ -204,14 +204,23 @@ router.get("/:hostname", async (req, res) => {
     const saved = rows[0] || null;
     const dataRisk = saved ? Number(saved.data_risk || 0) : 0;
 
-    // 2) phishing risk via classifier (0–1)
+    // 2) phishing risk via classifier with caching (0–1)
     let phishingRisk = 0;
     try {
-      const phishingRes = await classifyPhishing(hostname);
-      // normalize: support {score: 0..1} or top-1 label mapping
-      let s = Number(phishingRes?.score);
-      if (!Number.isFinite(s)) s = 0;
-      phishingRisk = Math.max(0, Math.min(1, s));
+      // Check cache first
+      const cached = await db.getCachedPhishingScore(hostname);
+      if (cached) {
+        phishingRisk = Number(cached.phishing_score);
+      } else {
+        // Get fresh score and cache it
+        const phishingRes = await classifyPhishing(hostname);
+        let s = Number(phishingRes?.phishingScore ?? phishingRes?.score);
+        if (!Number.isFinite(s)) s = 0;
+        phishingRisk = Math.max(0, Math.min(1, s));
+        
+        // Cache the result
+        await db.cachePhishingScore(hostname, phishingRisk, phishingRes?.label || 'unknown', phishingRes?.model || 'unknown');
+      }
     } catch (err) {
       console.warn("[risk:get/:hostname] phishing check failed:", err?.message || err);
     }

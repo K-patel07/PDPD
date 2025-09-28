@@ -8,8 +8,13 @@ const psl = require("psl");
 /* ============================== Config ============================== */
 const PH_API_URL = process.env.PHISHING_API_URL || "http://127.0.0.1:8000/phishing";
 const PH_API_KEY = process.env.PHISHING_API_KEY || "";
+const HF_API_KEY = process.env.HF_API_KEY || "";
+const HF_MODEL = process.env.HF_MODEL || "ealvaradob/bert-finetuned-phishing";
 const PH_ENABLED = String(process.env.PHISHING_ENABLED ?? "true").toLowerCase() === "true";
 const LOG_PHISH  = String(process.env.LOG_PHISHING || "").toLowerCase() === "true";
+
+// Use HF API if we have a key, otherwise fall back to local service
+const USE_HF_API = Boolean(HF_API_KEY);
 
 // Milliseconds
 const CONNECT_TIMEOUT_MS = Number(process.env.PHISHING_CONNECT_TIMEOUT_MS || 1500); // connect
@@ -159,6 +164,48 @@ async function postJsonWithRetry(url, body, retries = RETRIES, timeoutMs = TOTAL
   throw lastErr || new Error("unknown fetch error");
 }
 
+/* ============================== Hugging Face API ============================== */
+async function classifyWithHF(url) {
+  try {
+    const response = await fetch(`https://api-inference.huggingface.co/models/${HF_MODEL}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${HF_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ inputs: url }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HF API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    // HF returns array of predictions
+    if (Array.isArray(data) && data.length > 0) {
+      const prediction = data[0];
+      // Find phishing/safe label and extract score
+      const phishLabel = prediction.find(p => p.label && /phish|malicious|scam/i.test(p.label));
+      const safeLabel = prediction.find(p => p.label && /safe|benign|legit/i.test(p.label));
+      
+      if (phishLabel) {
+        return { score: phishLabel.score, label: phishLabel.label };
+      } else if (safeLabel) {
+        return { score: 1 - safeLabel.score, label: safeLabel.label };
+      } else {
+        // Use highest confidence prediction
+        const topPred = prediction.reduce((max, p) => p.score > max.score ? p : max);
+        return { score: topPred.score, label: topPred.label };
+      }
+    }
+    
+    return { score: 0, label: "unknown" };
+  } catch (err) {
+    throw new Error(`HF API failed: ${err.message}`);
+  }
+}
+
 /* ============================== Public API ============================== */
 /**
  * classifyPhishing(input) → { ok, phishingScore, url, label, model, error? }
@@ -175,10 +222,33 @@ async function classifyPhishing(input) {
     const url = toUrl(input);
     if (!url) return { ok: false, phishingScore: 0, error: "Invalid URL/hostname" };
 
+    let result;
+    
+    if (USE_HF_API) {
+      // Use Hugging Face API
+      try {
+        result = await classifyWithHF(url);
+        const phishingScore = Math.max(0, Math.min(1, Number(result.score)));
+        const label = phishingScore >= 0.5 ? "phishing" : "safe";
+        
+        if (LOG_PHISH) {
+          console.log("[phishingModel] HF URL:", url);
+          console.log("[phishingModel] HF Result:", result);
+          console.log("[phishingModel] Final:", phishingScore, label);
+        }
+        
+        return { ok: true, phishingScore, url, label, model: "huggingface" };
+      } catch (err) {
+        if (LOG_PHISH) console.warn("[phishingModel] HF failed, trying fallback:", err.message);
+        // Fall through to local service
+      }
+    }
+
+    // Fallback to local Python service
     const { ok, status, json } = await postJsonWithRetry(PH_API_URL, { url }, RETRIES, TOTAL_TIMEOUT_MS);
 
     if (!ok) {
-      const msg = `Python service error: ${status}`;
+      const msg = `Service error: ${status}`;
       if (LOG_PHISH) console.warn("[phishingModel]", msg);
       return { ok: false, phishingScore: 0, error: msg, url };
     }
@@ -192,7 +262,7 @@ async function classifyPhishing(input) {
 
     if (LOG_PHISH) {
       const raw = Array.isArray(json?.result) ? json.result : (json?.score ?? json);
-      console.log("[phishingModel] URL:", url);
+      console.log("[phishingModel] Local URL:", url);
       console.log("[phishingModel] Raw:", raw);
       console.log("[phishingModel] Final:", phishingScore, label);
     }
