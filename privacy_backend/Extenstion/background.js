@@ -51,11 +51,10 @@ async function getIdentity() {
   ]);
   
   const token = storage.auth_token || storage.token;
-  console.log('[getIdentity] Retrieved token:', token ? 'SET' : 'NOT_SET', {
-    hasAuthToken: !!storage.auth_token,
-    hasToken: !!storage.token,
-    ext_user_id
-  });
+  // Reduced logging for token retrieval
+  if (!token) {
+    console.log('[getIdentity] Retrieved token: NOT_SET');
+  }
   
   return { ext_user_id, token };
 }
@@ -181,14 +180,11 @@ async function postJSON(path, bodyObj, retryCount = 0) {
   const headers = { "Content-Type": "application/json" };
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
-    console.log(`[postJSON ${path}] Using authenticated request`);
-  } else {
-    console.log(`[postJSON ${path}] Using unauthenticated request`);
   }
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
     const res = await fetch(`${API_BASE}${path}`, {
       method: "POST",
@@ -201,9 +197,9 @@ async function postJSON(path, bodyObj, retryCount = 0) {
     
     if (res.ok) {
       return true;
-    } else if (res.status === 502 && retryCount < 3) {
-      // Retry 502 errors up to 3 times with exponential backoff
-      const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+    } else if (res.status === 502 && retryCount < 2) {
+      // Retry 502 errors up to 2 times with longer delays
+      const delay = (retryCount + 1) * 3000; // 3s, 6s
       console.log(`[postJSON ${path}] HTTP 502, retrying in ${delay}ms (attempt ${retryCount + 1})`);
       await new Promise(resolve => setTimeout(resolve, delay));
       return postJSON(path, bodyObj, retryCount + 1);
@@ -214,9 +210,9 @@ async function postJSON(path, bodyObj, retryCount = 0) {
   } catch (err) {
     if (err.name === 'AbortError') {
       console.warn(`[postJSON ${path}] Request timeout`);
-    } else if (retryCount < 3) {
-      // Retry network errors with exponential backoff
-      const delay = Math.pow(2, retryCount) * 1000;
+    } else if (retryCount < 2) {
+      // Retry network errors with longer delays
+      const delay = (retryCount + 1) * 3000;
       console.log(`[postJSON ${path}] Network error, retrying in ${delay}ms (attempt ${retryCount + 1}):`, err.message);
       await new Promise(resolve => setTimeout(resolve, delay));
       return postJSON(path, bodyObj, retryCount + 1);
@@ -229,11 +225,6 @@ async function postJSON(path, bodyObj, retryCount = 0) {
 
 async function sendVisit(payload) {
   const { ext_user_id, token } = await getIdentity();
-  
-  // Skip if no authentication token (visit tracking should work without auth)
-  if (!token) {
-    console.log("[sendVisit] No authentication token, sending without auth");
-  }
   
   // postJSON now handles retries internally
   const success = await postJSON("/api/track/visit", { ...payload, ext_user_id });
@@ -252,13 +243,8 @@ async function sendVisit(payload) {
 async function sendSubmit(payload) {
   const { ext_user_id, token } = await getIdentity();
 
-  console.log("[sendSubmit] Processing form submission:", {
-    hostname: payload.hostname,
-    hasToken: !!token,
-    ext_user_id,
-    fields_detected: payload.fields_detected,
-    submitted_keys: Object.keys(payload).filter(k => k.startsWith('submitted_'))
-  });
+  // Reduced logging for form submissions
+  console.log("[sendSubmit] Processing form submission for:", payload.hostname);
 
   // Guard: ensure at least one meaningful flag
   const fd = payload.fields_detected || {};
@@ -269,7 +255,7 @@ async function sendSubmit(payload) {
   ];
   const hasSubmitted = submittedKeys.some(k => !!payload[k]);
   
-  console.log("[sendSubmit] Form validation:", { hasFD, hasSubmitted, shouldProceed: hasFD || hasSubmitted });
+  // Reduced logging for form validation
   
   if (!hasFD && !hasSubmitted) {
     console.log("[sendSubmit] No form fields detected, skipping");
@@ -424,19 +410,12 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
 async function onAuthSuccess(data) {
   // data should contain { token, ext_user_id, dashboard_url? }
-  console.log("[onAuthSuccess] Storing auth data:", {
-    hasToken: !!data.token,
-    hasExtUserId: !!data.ext_user_id
-  });
-  
   await chrome.storage.local.set({
     auth_token: data.token,
     ext_user_id: data.ext_user_id,
     dashboard_url: "https://privacy.pulse-pr5m.onrender.com", // production frontend
     popup_status: "ON"
   });
-  
-  console.log("[onAuthSuccess] Auth data stored successfully");
 }
 /* =========================
    MESSAGE HANDLERS
@@ -471,34 +450,20 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       }
 
       if (msg?.type === "FORM_SUBMIT") {
-        console.log("[background] Received FORM_SUBMIT message:", msg);
         const data = msg.data || msg.payload || {};
         if (!data?.hostname) { 
-          console.log("[background] FORM_SUBMIT missing hostname");
           sendResponse({ ok: false, error: "hostname missing" }); 
           return; 
         }
 
         const { token } = await getIdentity();
         if (!token) {
-          console.log("[background] FORM_SUBMIT no authentication token - checking storage");
-          // Try to refresh token from storage
-          const storage = await chrome.storage.local.get(["token", "auth_token"]);
-          console.log("[background] Storage check:", {
-            hasAuthToken: !!storage.auth_token,
-            hasToken: !!storage.token
-          });
-          
-          if (!storage.auth_token && !storage.token) {
-            sendResponse({ ok: false, error: "Authentication required. Please log in via the extension options page." });
-            return;
-          }
+          sendResponse({ ok: false, error: "Authentication required. Please log in via the extension options page." });
+          return;
         }
 
-        console.log("[background] Processing FORM_SUBMIT for hostname:", data.hostname);
         const screen_time_seconds = await estimateScreenTimeFor(data.hostname);
         const ok = await sendSubmit({ ...data, screen_time_seconds });
-        console.log("[background] FORM_SUBMIT result:", ok);
         sendResponse({ ok });
         return;
       }
@@ -531,14 +496,27 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 // Keep backend warm to prevent cold starts
 async function keepAlive() {
   try {
-    const res = await fetch(`${API_BASE}/ping`, { method: "GET" });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    
+    const res = await fetch(`${API_BASE}/ping`, { 
+      method: "GET",
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
     if (res.ok) {
       console.log("[keepAlive] Backend is warm");
     } else {
       console.warn("[keepAlive] Backend ping failed:", res.status);
     }
   } catch (err) {
-    console.warn("[keepAlive] Failed to ping backend:", err.message);
+    if (err.name === 'AbortError') {
+      console.warn("[keepAlive] Ping timeout");
+    } else {
+      console.warn("[keepAlive] Failed to ping backend:", err.message);
+    }
   }
 }
 
@@ -551,8 +529,8 @@ chrome.runtime.onInstalled.addListener(async () => {
   await processOfflineQueue();
   await keepAlive();
   
-  // Set up keep-alive alarm
-  chrome.alarms.create("keepAlive", { periodInMinutes: 5 });
+  // Set up keep-alive alarm (every 3 minutes)
+  chrome.alarms.create("keepAlive", { periodInMinutes: 3 });
 });
 chrome.runtime.onStartup.addListener(async () => {
   chrome.idle.setDetectionInterval(IDLE_SECONDS);
@@ -560,8 +538,8 @@ chrome.runtime.onStartup.addListener(async () => {
   await processOfflineQueue();
   await keepAlive();
   
-  // Set up keep-alive alarm
-  chrome.alarms.create("keepAlive", { periodInMinutes: 5 });
+  // Set up keep-alive alarm (every 3 minutes)
+  chrome.alarms.create("keepAlive", { periodInMinutes: 3 });
 });
 
 chrome.idle.onStateChanged.addListener(async (newState) => {
