@@ -438,6 +438,13 @@ router.get("/provided-data/site", async (req, res, next) => {
     const { extUserId } = resolveUser(req);
     const canonHost = normalizeHostname(String(req.query.hostname || ""));
 
+    console.log("[provided-data/site] Request:", {
+      extUserId,
+      hostname: req.query.hostname,
+      canonHost,
+      auth: req.headers.authorization ? "present" : "missing"
+    });
+
     if (!extUserId) return res.status(400).json({ ok: false, error: "extUserId required" });
     if (!canonHost) return res.status(400).json({ ok: false, error: "hostname required" });
 
@@ -503,7 +510,9 @@ router.get("/provided-data/site", async (req, res, next) => {
         ) AS fields_count
       FROM fs;
     `;
+    console.log("[provided-data/site] Query params:", { extUserId, canonHost });
     const { rows } = await dbq(sql, [extUserId, canonHost]);
+    console.log("[provided-data/site] Query result:", { rowCount: rows.length, data: rows[0] });
     let base = rows?.[0] || null;
 
     if (!base || base.website_id == null) {

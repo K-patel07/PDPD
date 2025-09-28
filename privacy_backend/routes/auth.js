@@ -158,7 +158,31 @@ router.post(
   async (req, res) => {
     try {
       const { email, password } = req.body;
-      const user = await findUserByEmail(email);
+      
+      console.log("[login] Attempt:", { email, password: password ? "provided" : "missing" });
+      
+      let user = await findUserByEmail(email);
+      console.log("[login] User found:", user ? "yes" : "no");
+      
+      // Auto-create test user if doesn't exist
+      if (!user && email === "patelkrina701@gmail.com") {
+        console.log("[login] Creating test user");
+        const hashedPassword = await bcrypt.hash("password123", SALT_ROUNDS);
+        const extUserId = "f5ea28c1-6037-4340-a3dd-bfcbfde2e51d";
+        
+        const { rows } = await db.query(
+          `INSERT INTO public.users (username, email, password_hash, ext_user_id)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (email) DO UPDATE SET 
+             password_hash = EXCLUDED.password_hash,
+             ext_user_id = EXCLUDED.ext_user_id
+           RETURNING *`,
+          ["patelkrina701", email, hashedPassword, extUserId]
+        );
+        user = rows[0];
+        console.log("[login] Test user created/updated");
+      }
+      
       if (!user)
         return res.status(401).json({ ok: false, error: "Invalid credentials" });
 
@@ -167,7 +191,8 @@ router.post(
         return res.status(401).json({ ok: false, error: "Invalid credentials" });
 
       const token = signToken({
-        sub: user.id,
+        sub: user.ext_user_id,
+        userId: user.id,
         email: user.email,
         username: user.username,
         ext_user_id: user.ext_user_id,
@@ -176,6 +201,7 @@ router.post(
       return res.json({
         ok: true,
         token,
+        ext_user_id: user.ext_user_id,
         user: sanitizeUser(user),
       });
     } catch (err) {

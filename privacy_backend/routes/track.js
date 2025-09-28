@@ -603,6 +603,18 @@ router.post("/submit", async (req, res) => {
     const trueKeys = Object.entries(submitted).filter(([, v]) => v).map(([k]) => k).join(", ");
     console.log(`[submit] saved: ${hostname} user:${ext_user_id} flags{ ${trueKeys} }`);
 
+    // Debug: Check if data was actually inserted
+    try {
+      const check = await db.query(
+        `SELECT COUNT(*) as count FROM public.field_submissions 
+         WHERE ext_user_id = $1 AND hostname = $2`,
+        [ext_user_id, hostname]
+      );
+      console.log(`[submit] verification: ${check.rows[0]?.count || 0} records for ${hostname}`);
+    } catch (e) {
+      console.warn(`[submit] verification failed:`, e.message);
+    }
+
     return res.sendStatus(204);
   } catch (err) {
     if (err?.isJoi) {
