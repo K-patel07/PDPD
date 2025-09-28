@@ -154,6 +154,17 @@ app.get("/health", (_req, res) => {
   });
 });
 
+// Debug endpoint to check CORS configuration
+app.get("/debug/cors", (_req, res) => {
+  res.json({
+    allowedOrigins: allowedOrigins,
+    isProd: IS_PROD,
+    nodeEnv: NODE_ENV,
+    hfApiKey: HF_API_KEY ? "SET" : "NOT_SET",
+    hfModel: HF_MODEL,
+  });
+});
+
 app.get("/", (_req, res) => {
   res.json({
     ok: true,
