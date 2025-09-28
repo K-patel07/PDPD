@@ -117,6 +117,9 @@ app.use(
   })
 );
 
+// Explicitly handle OPTIONS requests for all routes
+app.options('*', cors());
+
 /* ---------------------------- Rate Limits ---------------------------- */
 // Global limiter
 app.use(generalLimiter);
@@ -162,6 +165,8 @@ app.get("/debug/cors", (_req, res) => {
     nodeEnv: NODE_ENV,
     hfApiKey: HF_API_KEY ? "SET" : "NOT_SET",
     hfModel: HF_MODEL,
+    jwtSecret: process.env.JWT_SECRET ? "SET" : "NOT_SET",
+    jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
   });
 });
 
