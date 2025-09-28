@@ -389,7 +389,7 @@ body::before{
 .chart-grid {
   display: grid; grid-template-columns: minmax(0, .75fr) minmax(0, 1fr);
   gap: 16px; align-items: stretch; width: 100%;
-  margin-bottom: 20px; /* Space between charts and trend card */
+  margin-bottom: 12px; /* Space between charts and trend card */
 }
 .chart-grid > * { height: 100%; min-width: 0; }
 .chart-placeholder {
@@ -606,8 +606,8 @@ body::before{
    Spacing helpers
    ========================================================= */
 .dashboard .category-scroll { 
-  margin-top: 100px;
-  margin-bottom: 100px; /* Space between category carousel and welcome card */
+  margin-top: 40px;
+  margin-bottom: 40px; /* Space between category carousel and welcome card */
   padding-bottom: 0; 
 }
 
