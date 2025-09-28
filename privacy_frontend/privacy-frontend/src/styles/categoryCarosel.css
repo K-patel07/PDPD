@@ -221,7 +221,7 @@
   --arrow-border: rgba(0, 0, 0, 0.1);        /* tile border */
   --arrow-icon: #2a3a4b;                   /* chevron color */
   --arrow-shadow: 0 6px 18px rgba(2,6,23,.12);  /* drop shadow */
-  --background: linear-gradient(135deg, rgba(73, 74, 148, 0.467), rgba(56,150,174,0.9)) !important;
+  --background: var(--panel) !important;
 }
 
 .theme-dark .category-scroll {
