@@ -265,7 +265,7 @@
 .category-scroll .category-item,
 .category-scroll .category-pill,
 .category-scroll .chip {
-  background: var(--panel) !important;
+  background: linear-gradient(70deg, rgba(73, 74, 148, 0.467), rgba(56,150,174,0.9)) !important;
   border-color: var(--stroke);
   color: var(--cat-icon-color, var(--text)) !important; /* text color */
 }
@@ -279,7 +279,7 @@
 .category-scroll .category-pill:focus-visible,
 .category-scroll .chip:hover,
 .category-scroll .chip:focus-visible {
-  background: var(--panel) !important;
+  background: linear-gradient(70deg, rgba(73, 74, 148, 0.467), rgba(56,150,174,0.9)) !important;
   border-color: var(--accent);
   color: var(--cat-icon-color, var(--text)) !important;
 }
