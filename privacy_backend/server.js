@@ -47,6 +47,7 @@ app.get("/health/db", async (_req, res) => {
 (async () => {
   try {
     await db.ensureUsersTable(db.pool);
+    await db.ensureTables(db.pool);
   } catch (e) {
     console.error("[db] init error", e);
   }

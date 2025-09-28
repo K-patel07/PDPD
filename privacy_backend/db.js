@@ -733,6 +733,7 @@ async function updateRiskForUserWebsite(ext_user_id, hostname) {
 module.exports = {
   pool,
   ensureUsersTable,
+  ensureTables,
   ping,
   query,
   withTx,
