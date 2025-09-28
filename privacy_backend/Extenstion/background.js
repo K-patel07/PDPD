@@ -172,15 +172,15 @@ async function processOfflineQueue() {
 /* =========================
    NETWORK HELPERS
 ========================= */
-async function postJSON(path, bodyObj) {
+async function postJSON(path, bodyObj, retryCount = 0) {
   const { token } = await getIdentity();
   const headers = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  
+
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
     const res = await fetch(`${API_BASE}${path}`, {
       method: "POST",
       headers,
@@ -192,6 +192,12 @@ async function postJSON(path, bodyObj) {
     
     if (res.ok) {
       return true;
+    } else if (res.status === 502 && retryCount < 3) {
+      // Retry 502 errors up to 3 times with exponential backoff
+      const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+      console.log(`[postJSON ${path}] HTTP 502, retrying in ${delay}ms (attempt ${retryCount + 1})`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return postJSON(path, bodyObj, retryCount + 1);
     } else {
       console.warn(`[postJSON ${path}] HTTP ${res.status}: ${res.statusText}`);
       return false;
@@ -199,8 +205,14 @@ async function postJSON(path, bodyObj) {
   } catch (err) {
     if (err.name === 'AbortError') {
       console.warn(`[postJSON ${path}] Request timeout`);
+    } else if (retryCount < 3) {
+      // Retry network errors with exponential backoff
+      const delay = Math.pow(2, retryCount) * 1000;
+      console.log(`[postJSON ${path}] Network error, retrying in ${delay}ms (attempt ${retryCount + 1}):`, err.message);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return postJSON(path, bodyObj, retryCount + 1);
     } else {
-      console.warn(`[postJSON ${path}] Network error:`, err.message);
+      console.warn(`[postJSON ${path}] Network error after retries:`, err.message);
     }
     return false;
   }
@@ -209,17 +221,8 @@ async function postJSON(path, bodyObj) {
 async function sendVisit(payload) {
   const { ext_user_id } = await getIdentity();
   
-  // Try up to 2 times for 502 errors
-  let success = false;
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    success = await postJSON("/api/track/visit", { ...payload, ext_user_id });
-    if (success) break;
-    
-    if (attempt < 2) {
-      console.log(`[sendVisit] Attempt ${attempt} failed, retrying...`);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-    }
-  }
+  // postJSON now handles retries internally
+  const success = await postJSON("/api/track/visit", { ...payload, ext_user_id });
   
   if (!success) {
     // Queue for retry when offline
@@ -266,24 +269,13 @@ async function sendSubmit(payload) {
     return false;
   }
 
-  // Try up to 2 times for 502 errors
-  let success = false;
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    console.log(`[sendSubmit] Attempt ${attempt} to send form data`);
-    success = await postJSON("/api/track/submit", { ...payload, ext_user_id });
-    if (success) {
-      console.log(`[sendSubmit] Successfully sent form submission on attempt ${attempt}`);
-      break;
-    }
-    
-    if (attempt < 2) {
-      console.log(`[sendSubmit] Attempt ${attempt} failed, retrying...`);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-    }
-  }
+  // postJSON now handles retries internally
+  const success = await postJSON("/api/track/submit", { ...payload, ext_user_id });
   
-  if (!success) {
-    console.log("[sendSubmit] All attempts failed, queuing for offline retry");
+  if (success) {
+    console.log(`[sendSubmit] Successfully sent form submission`);
+  } else {
+    console.log("[sendSubmit] Failed after retries, queuing for offline retry");
     // Queue for retry when offline
     await addToOfflineQueue({
       path: "/api/track/submit",
@@ -392,6 +384,11 @@ async function cancelFlushAlarm() {
 }
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === "keepAlive") {
+    await keepAlive();
+    return;
+  }
+  
   if (alarm.name !== ALARM_NAME) return;
   
   // Process offline queue first
@@ -501,6 +498,20 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 /* =========================
    EVENT WIRING
 ========================= */
+// Keep backend warm to prevent cold starts
+async function keepAlive() {
+  try {
+    const res = await fetch(`${API_BASE}/ping`, { method: "GET" });
+    if (res.ok) {
+      console.log("[keepAlive] Backend is warm");
+    } else {
+      console.warn("[keepAlive] Backend ping failed:", res.status);
+    }
+  } catch (err) {
+    console.warn("[keepAlive] Failed to ping backend:", err.message);
+  }
+}
+
 chrome.runtime.onInstalled.addListener(async () => {
   chrome.idle.setDetectionInterval(IDLE_SECONDS);
   const { enabled } = await chrome.storage.local.get("enabled");
@@ -508,11 +519,19 @@ chrome.runtime.onInstalled.addListener(async () => {
   
   // Process any queued items on startup
   await processOfflineQueue();
+  await keepAlive();
+  
+  // Set up keep-alive alarm
+  chrome.alarms.create("keepAlive", { periodInMinutes: 5 });
 });
 chrome.runtime.onStartup.addListener(async () => {
   chrome.idle.setDetectionInterval(IDLE_SECONDS);
   // Process any queued items on startup
   await processOfflineQueue();
+  await keepAlive();
+  
+  // Set up keep-alive alarm
+  chrome.alarms.create("keepAlive", { periodInMinutes: 5 });
 });
 
 chrome.idle.onStateChanged.addListener(async (newState) => {

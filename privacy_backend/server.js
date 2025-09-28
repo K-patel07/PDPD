@@ -170,6 +170,11 @@ app.get("/debug/cors", (_req, res) => {
   });
 });
 
+// Keep-alive endpoint to prevent cold starts
+app.get("/ping", (_req, res) => {
+  res.json({ ok: true, message: "pong", timestamp: Date.now() });
+});
+
 app.get("/", (_req, res) => {
   res.json({
     ok: true,
@@ -178,6 +183,7 @@ app.get("/", (_req, res) => {
     time: new Date().toISOString(),
     endpoints: [
       "/health",
+      "/ping",
       "/api/track/visit",
       "/api/track/submit",
       "/api/classify",
