@@ -45,11 +45,11 @@ async function getExtUserId() {
 }
 
 async function getIdentity() {
-  const [ext_user_id, { token }] = await Promise.all([
+  const [ext_user_id, { token, auth_token }] = await Promise.all([
     getExtUserId(),
-    chrome.storage.local.get("token")
+    chrome.storage.local.get(["token", "auth_token"])
   ]);
-  return { ext_user_id, token };
+  return { ext_user_id, token: auth_token || token };
 }
 
 function isHttpUrl(url = "") {
