@@ -472,6 +472,7 @@ router.post("/submit", requireAuth, async (req, res) => {
     // Get ext_user_id from authenticated user (set by requireAuth middleware)
     const ext_user_id = req.user?.ext_user_id || req.user?.sub;
     if (!ext_user_id) {
+      console.error("[submit] Missing ext_user_id in JWT token:", req.user);
       return res.status(401).json({ ok: false, error: "Authentication required" });
     }
 
@@ -480,8 +481,17 @@ router.post("/submit", requireAuth, async (req, res) => {
     const hostname = normalizeHostname(rawHost);
     if (!hostname || isBlocked(hostname)) return res.sendStatus(204);
 
-    await getOrCreateUserIdByExt(ext_user_id);
+    const user_id = await getOrCreateUserIdByExt(ext_user_id);
+    if (!user_id) {
+      console.error("[submit] Failed to create/find user for ext_user_id:", ext_user_id);
+      return res.status(500).json({ ok: false, error: "User creation failed" });
+    }
+    
     const website_id = await getOrCreateWebsiteId(hostname);
+    if (!website_id) {
+      console.error("[submit] Failed to create/find website for hostname:", hostname);
+      return res.status(500).json({ ok: false, error: "Website creation failed" });
+    }
 
     // unify flags
     const src =
@@ -557,7 +567,16 @@ router.post("/submit", requireAuth, async (req, res) => {
 
     const placeholders = vals.map((_, i) => `$${i + 1}`).join(",");
     const sql = `INSERT INTO public.field_submissions (${cols.join(",")}) VALUES (${placeholders});`;
-    await db.query(sql, vals);
+    
+    try {
+      await db.query(sql, vals);
+      console.log(`[submit] Successfully inserted field submission for ${hostname}`);
+    } catch (dbError) {
+      console.error("[submit] Database insert failed:", dbError.message);
+      console.error("[submit] SQL:", sql);
+      console.error("[submit] Values:", vals);
+      return res.status(500).json({ ok: false, error: "Database insert failed" });
+    }
 
     // risk update based on submitted fields
     try {
@@ -627,9 +646,12 @@ router.post("/submit", requireAuth, async (req, res) => {
     return res.sendStatus(204);
   } catch (err) {
     if (err?.isJoi) {
+      console.error("[submit] Validation error:", err.details?.[0]?.message);
       return res.status(400).json({ ok: false, error: err.details?.[0]?.message || "invalid submit payload" });
     }
     console.error("[submit] ERROR", err);
+    console.error("[submit] Request body:", req.body);
+    console.error("[submit] User:", req.user);
     return res.status(500).json({ ok: false, error: "Internal server error" });
   }
 });

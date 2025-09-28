@@ -51,10 +51,8 @@ async function getIdentity() {
   ]);
   
   const token = storage.auth_token || storage.token;
-  // Reduced logging for token retrieval
-  if (!token) {
-    console.log('[getIdentity] Retrieved token: NOT_SET');
-  }
+  // Only log when token is expected but missing (e.g., during form submission)
+  // Don't log for normal visit tracking which works without authentication
   
   return { ext_user_id, token };
 }
@@ -269,8 +267,15 @@ async function sendSubmit(payload) {
 
   // Skip if no authentication token
   if (!token) {
-    console.warn("[sendSubmit] No authentication token, skipping submit");
-    console.log("[sendSubmit] To enable form tracking, please log in via the extension options page");
+    // Only log once per session to avoid spam
+    const lastLogKey = "last_token_warning";
+    const { [lastLogKey]: lastLog } = await chrome.storage.local.get(lastLogKey);
+    const now = Date.now();
+    
+    if (!lastLog || now - lastLog > 300000) { // 5 minutes
+      console.log("[sendSubmit] Form tracking requires authentication. Please log in via the extension options page");
+      await chrome.storage.local.set({ [lastLogKey]: now });
+    }
     return false;
   }
 
@@ -278,9 +283,9 @@ async function sendSubmit(payload) {
   const success = await postJSON("/api/track/submit", { ...payload, ext_user_id }, 0, true);
   
   if (success) {
-    console.log(`[sendSubmit] Successfully sent form submission`);
+    console.log(`[sendSubmit] Successfully sent form submission for ${payload.hostname}`);
   } else {
-    console.log("[sendSubmit] Failed after retries, queuing for offline retry");
+    console.warn(`[sendSubmit] Failed to send form submission for ${payload.hostname}, queuing for offline retry`);
     // Queue for retry when offline
     await addToOfflineQueue({
       path: "/api/track/submit",
