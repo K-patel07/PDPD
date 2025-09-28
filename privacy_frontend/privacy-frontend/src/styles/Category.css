@@ -9,9 +9,8 @@
   --frame-border: 2px;
   --frame-grad-angle: var(--grad-angle, 320deg);
   --frame-grad-a: var(rgba(39, 40, 103, 0.8));  
-  --frame-grad-b: var( rgba(54, 172, 201, 0.8));
-  --frame-fill: #fffefe;            /* white interior in both themes */
-
+  --frame-grad-b: var( rgba(54, 172, 201, 0.8));            /* white interior in both themes */
+  --cat-icon-color: #000000;   /* black for light mode */
 }
 
 

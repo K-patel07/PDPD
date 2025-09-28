@@ -44,7 +44,7 @@
   padding: var(--chip-pad-y) var(--chip-pad-x);
   min-height: calc(var(--icon-tile-size) + 8px); /* fits bigger tiles */
   border-radius: var(--chip-radius);
-  background: var(--panel);
+  background: var(--panel) !important;
   border: 1px solid var(--stroke);
   box-shadow: var(--shadow-sm);
   line-height: 1.1;
@@ -259,14 +259,14 @@
      --grad-b: var(--grad-b-strong); */
 }
 
-/* All category chips use the gradient */
+/* All category chips use the panel background */
 .category-scroll .category,
 .category-scroll .category-item,
 .category-scroll .category-pill,
 .category-scroll .chip {
-  background: linear-gradient(var(--grad-angle), var(--grad-a), var(--grad-b));
-  border-color: transparent;
-  color: #fff; /* text becomes white */
+  background: var(--panel) !important;
+  border-color: var(--stroke);
+  color: var(--cat-icon-color, var(--text)) !important; /* text color */
 }
 
 /* Keep your normal look; switch to gradient on hover/focus */
@@ -278,29 +278,30 @@
 .category-scroll .category-pill:focus-visible,
 .category-scroll .chip:hover,
 .category-scroll .chip:focus-visible {
-  background: linear-gradient(var(--grad-angle), var(--grad-a), var(--grad-b));
-  border-color: transparent;
-  color: #fff;
+  background: var(--panel) !important;
+  border-color: var(--accent);
+  color: var(--cat-icon-color, var(--text)) !important;
 }
 
-/* Glassy icon tile on gradient */
+/* Icon tile styling */
 .category-scroll .category .category-icon {
-  background: rgba(255, 255, 255, 0.201);
-  border: 1px solid rgba(255,255,255,.28);
+  background: var(--icon-tile-bg);
+  border: 1px solid var(--icon-tile-border);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.35),
     0 1px 2px rgba(2,6,23,.10);
 }
 
-/* If your icons are SVGs that use currentColor, turn them white */
-.category-scroll .category .category-icon { color:#fff; }
+/* If your icons are SVGs that use currentColor, use theme color */
+.category-scroll .category .category-icon { color: var(--cat-icon-color, var(--text)) !important; }
 .category-scroll .category .category-icon svg { stroke: currentColor; fill: none; }
 
-/* If your icons are PNGs, you can *test* this filter (remove if it looks off) */
-.category-scroll .category .category-icon img {
-  filter: brightness(1.2) saturate(1.1);
-  /* optional: invert to white-ish, comment out if it ruins colors */
-  /* filter: invert(1) brightness(1.15) contrast(1.1); */
+/* PNG icon styling for theme colors */
+.theme-light .category-scroll .category .category-icon img {
+  filter: brightness(0); /* black icons in light mode */
+}
+.theme-dark .category-scroll .category .category-icon img {
+  filter: brightness(0) invert(1); /* white icons in dark mode */
 }
 
 .category-scroll .category,
@@ -364,10 +365,10 @@ header#top {
 
 /* unify icon + label color on the chip */
 .category-scroll .category { 
-  color: #ffffff;                    /* label white on gradient chips */
+  color: var(--cat-icon-color, var(--text)) !important;                    /* label color */
 }
 .category-scroll .category .category-icon {
-  color: #ffffff !important;         /* icon color (for SVGs that use currentColor) */
+  color: var(--cat-icon-color, var(--text)) !important;         /* icon color (for SVGs that use currentColor) */
 }
 
 /* make all shapes inside the SVG take the chip color */
@@ -381,7 +382,7 @@ header#top {
 
 /* 1) Choose the color once per theme */
 :root{
-  --cat-icon-color: #ffffff;   /* light mode icon/label color */
+  --cat-icon-color: #000000;   /* light mode icon/label color */
 }
 .dark, .theme-dark{
   --cat-icon-color: #ffffff;   /* dark mode icon/label color (change if you want) */
@@ -408,9 +409,14 @@ header#top {
 }
 
 /* 5) If your icons are PNGs/IMGs, tint them to the same color */
-.category-scroll .category .category-icon img,
-.category-scroll .category > :first-child img{
-  /* White result from a dark base icon */
+.theme-light .category-scroll .category .category-icon img,
+.theme-light .category-scroll .category > :first-child img{
+  /* Black icons in light mode */
+  filter: brightness(0) !important;
+}
+.theme-dark .category-scroll .category .category-icon img,
+.theme-dark .category-scroll .category > :first-child img{
+  /* White icons in dark mode */
   filter: brightness(0) invert(1) !important;
 }
 

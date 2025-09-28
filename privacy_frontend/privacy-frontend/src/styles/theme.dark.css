@@ -9,7 +9,7 @@
   --text: #e7e7ea;        /* primary text */
   --text-color: var(--text);
 
-  --category-icon-color: black;
+  --category-icon-color: #ffffff;
 
   --panel: #16181d;       /* cards/panels */
   --card-color: var(--panel);

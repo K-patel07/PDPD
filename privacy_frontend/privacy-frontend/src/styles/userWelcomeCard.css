@@ -22,7 +22,7 @@
 
 /* remove the overhang-based auto spacer (since there’s no art now) */
 .greet-card, .welcome-card, .user-welcome-card{
-  margin-bottom: var(--gap-welcome-to-next, 0px) !important;
+  margin-bottom: 40px !important; /* Space between welcome card and charts */
 }
 
 /* Ensure our card’s own gradient shows (no dimming mask) */
@@ -35,12 +35,12 @@
 /* Light theme gradient */
 .greet-card{
   background: linear-gradient(135deg, rgba(73, 74, 148, 0.467), rgba(56,150,174,0.9)) !important;
-  color: #000000; /* optional: ensures good contrast */
+  color: white /* optional: ensures good contrast */
 }
 
 /* Dark theme gradient */
 .dark .greet-card, .theme-dark .greet-card{
-  background: linear-gradient(135deg, rgba(116,117,195,0.7), rgba(0, 81, 101, 0.9)) !important;
+  background: linear-gradient(135deg, rgba(73, 74, 148, 0.467), rgba(56,150,174,0.9)) !important;
   color: #fff; /* optional */
 }
 
@@ -51,7 +51,7 @@
   font-size: 1.1rem; 
   font-weight: 600; 
   letter-spacing: .2px; 
-  color: rgb(0, 0, 0); 
+  color: white; 
 } 
 
 .dark .greet-card p, .welcome-card p, .user-welcome-card p{ 
