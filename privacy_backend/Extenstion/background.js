@@ -51,7 +51,11 @@ async function getIdentity() {
   ]);
   
   const token = storage.auth_token || storage.token;
-  console.log('[getIdentity] Retrieved token:', token ? 'SET' : 'NOT_SET');
+  console.log('[getIdentity] Retrieved token:', token ? 'SET' : 'NOT_SET', {
+    hasAuthToken: !!storage.auth_token,
+    hasToken: !!storage.token,
+    ext_user_id
+  });
   
   return { ext_user_id, token };
 }
@@ -175,7 +179,12 @@ async function processOfflineQueue() {
 async function postJSON(path, bodyObj, retryCount = 0) {
   const { token } = await getIdentity();
   const headers = { "Content-Type": "application/json" };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+    console.log(`[postJSON ${path}] Using authenticated request`);
+  } else {
+    console.log(`[postJSON ${path}] Using unauthenticated request`);
+  }
 
   try {
     const controller = new AbortController();
@@ -219,7 +228,12 @@ async function postJSON(path, bodyObj, retryCount = 0) {
 }
 
 async function sendVisit(payload) {
-  const { ext_user_id } = await getIdentity();
+  const { ext_user_id, token } = await getIdentity();
+  
+  // Skip if no authentication token (visit tracking should work without auth)
+  if (!token) {
+    console.log("[sendVisit] No authentication token, sending without auth");
+  }
   
   // postJSON now handles retries internally
   const success = await postJSON("/api/track/visit", { ...payload, ext_user_id });
@@ -410,12 +424,19 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
 async function onAuthSuccess(data) {
   // data should contain { token, ext_user_id, dashboard_url? }
+  console.log("[onAuthSuccess] Storing auth data:", {
+    hasToken: !!data.token,
+    hasExtUserId: !!data.ext_user_id
+  });
+  
   await chrome.storage.local.set({
     auth_token: data.token,
     ext_user_id: data.ext_user_id,
     dashboard_url: "https://privacy.pulse-pr5m.onrender.com", // production frontend
     popup_status: "ON"
   });
+  
+  console.log("[onAuthSuccess] Auth data stored successfully");
 }
 /* =========================
    MESSAGE HANDLERS
@@ -460,9 +481,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
         const { token } = await getIdentity();
         if (!token) {
-          console.log("[background] FORM_SUBMIT no authentication token");
-          sendResponse({ ok: false, error: "Authentication required. Please log in via the extension options page." });
-          return;
+          console.log("[background] FORM_SUBMIT no authentication token - checking storage");
+          // Try to refresh token from storage
+          const storage = await chrome.storage.local.get(["token", "auth_token"]);
+          console.log("[background] Storage check:", {
+            hasAuthToken: !!storage.auth_token,
+            hasToken: !!storage.token
+          });
+          
+          if (!storage.auth_token && !storage.token) {
+            sendResponse({ ok: false, error: "Authentication required. Please log in via the extension options page." });
+            return;
+          }
         }
 
         console.log("[background] Processing FORM_SUBMIT for hostname:", data.hostname);
