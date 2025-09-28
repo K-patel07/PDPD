@@ -1,7 +1,7 @@
 // services/jwtService.js
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-only-secret-change-in-production';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 class JWTService {
