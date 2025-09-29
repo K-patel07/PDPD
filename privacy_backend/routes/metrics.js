@@ -449,6 +449,7 @@ router.get("/provided-data/site", async (req, res, next) => {
     if (!canonHost) return res.status(400).json({ ok: false, error: "hostname required" });
 
     const F = await buildFieldExprs();
+    console.log("[provided-data/site] Field expressions:", F);
 
     const sql = `
       WITH canon AS ( SELECT $2::text AS p ),
