@@ -290,7 +290,9 @@ export default function WebsiteList({
         ))}
 
         {!loading && !err && !preview && filtered.length === 0 && (
-          <EmptyState categoryName={normCategory} />
+          <div className="empty-list-message">
+            <p>No websites found in this category</p>
+          </div>
         )}
       </div>
     </div>
