@@ -129,10 +129,14 @@ function detectCategory(hostname) {
   const h = hostname.toLowerCase();
   if (h.includes('facebook') || h.includes('instagram') || h.includes('twitter') || h.includes('tiktok') || h.includes('linkedin') || h.includes('reddit')) return 'Social Media';
   if (h.includes('youtube') || h.includes('netflix') || h.includes('spotify') || h.includes('twitch') || h.includes('hulu')) return 'Entertainment';
-  if (h.includes('amazon') || h.includes('ebay') || h.includes('shop') || h.includes('store')) return 'Shopping';
+  if (h.includes('amazon') || h.includes('ebay') || h.includes('shop') || h.includes('store')) return 'E-commerce';
   if (h.includes('bank') || h.includes('paypal') || h.includes('stripe') || h.includes('finance')) return 'Finance';
   if (h.includes('google') || h.includes('github') || h.includes('stackoverflow')) return 'Productivity';
   if (h.includes('wikipedia') || h.includes('edu')) return 'Education';
+  if (h.includes('news') || h.includes('blog')) return 'News';
+  if (h.includes('health') || h.includes('medical')) return 'Health';
+  if (h.includes('travel') || h.includes('hotel') || h.includes('flight')) return 'Travel';
+  if (h.includes('sport') || h.includes('espn') || h.includes('nba') || h.includes('nfl')) return 'Sports';
   return 'Others';
 }
 

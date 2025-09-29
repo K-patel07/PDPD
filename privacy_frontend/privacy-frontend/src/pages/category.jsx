@@ -17,6 +17,7 @@ import {
   fetchProvidedDataForSite,
   fetchSiteRisk,
   fetchSitesByCategory,
+  fetchCategoryInsights,
 } from "../api/metrics.js";
 import { canonicalCategory } from "../utils/categories.js";
 import { formatDuration, formatDate } from "../utils/formatters.js";
@@ -79,7 +80,7 @@ export default function Category() {
     html.classList.toggle("theme-light", !darkMode);
   }, [darkMode]);
 
-  // fetch sites for category
+  // fetch sites for category (NEW: uses combined endpoint with risk + fields)
   useEffect(() => {
     let cancelled = false;
 
@@ -89,7 +90,14 @@ export default function Category() {
         return;
       }
       try {
-        const list = await fetchSitesByCategory({ extUserId, category: categoryName });
+        // Try new combined endpoint first (includes risk + fields_detected)
+        let list = await fetchCategoryInsights({ extUserId, category: categoryName });
+        
+        // Fallback to old endpoint if new one fails or returns empty
+        if (!list || list.length === 0) {
+          list = await fetchSitesByCategory({ extUserId, category: categoryName });
+        }
+        
         if (cancelled) return;
         const sorted = [...(list || [])].sort((a, b) =>
           a.hostname.localeCompare(b.hostname)
@@ -100,7 +108,7 @@ export default function Category() {
           setSelectedSite(sorted[0]); // pick first by default
         }
       } catch (e) {
-        console.error("[Category] fetchSitesByCategory failed:", e);
+        console.error("[Category] fetchCategoryInsights failed:", e);
         if (!cancelled) setSites([]);
       }
     }
@@ -111,7 +119,7 @@ export default function Category() {
     };
   }, [extUserId, categoryName]); // reload when user or category changes
 
-  // fetch latest risk snapshot for the selected host
+  // fetch latest risk snapshot for the selected host (or use cached from combined endpoint)
   useEffect(() => {
     let cancelled = false;
 
@@ -121,6 +129,15 @@ export default function Category() {
         setRiskBand("unknown");
         return;
       }
+      
+      // Check if we already have risk data from the combined endpoint
+      if (selectedRow?.riskScore !== undefined && selectedRow?.band) {
+        setRiskScore(Number(selectedRow.riskScore || 0));
+        setRiskBand(selectedRow.band || "unknown");
+        return;
+      }
+      
+      // Fallback: fetch separately if not in combined data
       try {
         const data = await fetchSiteRisk({ extUserId, hostname: selectedHostname });
         const score =
@@ -143,9 +160,9 @@ export default function Category() {
     return () => {
       cancelled = true;
     };
-  }, [selectedHostname, extUserId]);
+  }, [selectedHostname, extUserId, selectedRow]);
 
-  // fetch provided-data flags for selected host
+  // fetch provided-data flags for selected host (or use cached from combined endpoint)
   useEffect(() => {
     let cancelled = false;
 
@@ -155,6 +172,24 @@ export default function Category() {
         setProvided(null);
         return;
       }
+      
+      // Check if we already have fields data from the combined endpoint
+      if (selectedRow?.fieldsDetected) {
+        const fd = selectedRow.fieldsDetected;
+        setProvided({
+          name: !!fd.name,
+          address: !!fd.address,
+          phone: !!fd.phone,
+          country: !!fd.country,
+          email: !!fd.email,
+          card: !!fd.card,
+          gender: !!fd.gender,
+          age: !!fd.age,
+        });
+        return;
+      }
+      
+      // Fallback: fetch separately if not in combined data
       try {
         const detail = await fetchProvidedDataForSite({
           extUserId,
@@ -187,7 +222,7 @@ export default function Category() {
     return () => {
       cancelled = true;
     };
-  }, [extUserId, selectedHostname]);
+  }, [extUserId, selectedHostname, selectedRow]);
 
   // values for the two mini-cards — metrics.js guarantees these fields
   const lastVisitText = useMemo(() => {

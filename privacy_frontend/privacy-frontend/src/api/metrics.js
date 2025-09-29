@@ -123,6 +123,54 @@ export async function fetchSiteRisk({ extUserId, hostname } = {}) {
   return data || {};
 }
 
+/**
+ * NEW: Category Insights endpoint (shared by dashboard & extension)
+ * GET /api/risk/track/sites?ext_user_id=<ID>&category=<CAT>
+ * Returns sites with risk scores, screen time, and fields_detected all in one call.
+ * 
+ * Returns: Array<{
+ *   hostname: string,
+ *   last_visited: string (ISO),
+ *   screen_time_seconds: number,
+ *   visits: number,
+ *   fields_detected: { email: bool, card: bool, ... },
+ *   data_risk: number (0-1),
+ *   phishing_risk: number (0-1),
+ *   combined_risk: number (0-1),
+ *   risk_score: number (0-100),
+ *   band: string
+ * }>
+ */
+export async function fetchCategoryInsights({ extUserId, category } = {}) {
+  const _ext = extUserId ?? getExtUserId();
+  if (!_ext || !category) return [];
+
+  try {
+    const { data } = await http.get("/api/risk/track/sites", {
+      params: { ext_user_id: _ext, category },
+    });
+    
+    // Normalize the response
+    return (Array.isArray(data) ? data : []).map((site) => ({
+      hostname: stripWWW(site.hostname || ""),
+      lastVisitISO: normTs(site.last_visited),
+      screenTimeSeconds: Number(site.screen_time_seconds || 0),
+      visitCounts: Number(site.visits || 0),
+      // Risk data (0-100 scale for risk_score)
+      riskScore: Number(site.risk_score || 0),
+      band: site.band || "Safe",
+      dataRisk: Number(site.data_risk || 0),
+      phishingRisk: Number(site.phishing_risk || 0),
+      combinedRisk: Number(site.combined_risk || 0),
+      // Fields detected
+      fieldsDetected: site.fields_detected || {},
+    }));
+  } catch (e) {
+    console.error("[metrics] fetchCategoryInsights failed:", e?.message || e);
+    return [];
+  }
+}
+
 /* ------------------------------------------------------------------
    Provided Data
 -------------------------------------------------------------------*/
