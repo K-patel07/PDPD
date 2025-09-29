@@ -212,17 +212,19 @@ export default function WebsiteList({
 
   return (
     <div className={cx("card panel left-list", className)} style={style}>
-      {/* Search */}
-      <label className="list-search search" aria-label="Filter websites">
-        <input
-          type="text"
-          placeholder="Search Here"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          disabled={preview}
-          aria-controls="website-listbox"
-        />
-      </label>
+      {/* Search - only show when there are websites */}
+      {!loading && !err && !preview && filtered.length > 0 && (
+        <label className="list-search search" aria-label="Filter websites">
+          <input
+            type="text"
+            placeholder="Search Here"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            disabled={preview}
+            aria-controls="website-listbox"
+          />
+        </label>
+      )}
 
       {/* Scrollable list */}
       <div
