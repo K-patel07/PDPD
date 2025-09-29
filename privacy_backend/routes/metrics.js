@@ -466,14 +466,14 @@ router.get("/provided-data/site", async (req, res, next) => {
           s.website_id,
           s.created_at,
           COALESCE(s.screen_time_seconds, 0) AS screen_time_seconds,
-          COALESCE((s.fields_detected->>'email')::boolean, false) AS email,
-          COALESCE((s.fields_detected->>'phone')::boolean, false) AS phone,
-          COALESCE((s.fields_detected->>'name')::boolean, false) AS name,
-          COALESCE((s.fields_detected->>'card')::boolean, false) AS card,
-          COALESCE((s.fields_detected->>'address')::boolean, false) AS address,
-          COALESCE((s.fields_detected->>'age')::boolean, false) AS age,
-          COALESCE((s.fields_detected->>'gender')::boolean, false) AS gender,
-          COALESCE((s.fields_detected->>'country')::boolean, false) AS country
+          COALESCE((s.fields_detected->'email')::boolean, false) AS email,
+          COALESCE((s.fields_detected->'phone')::boolean, false) AS phone,
+          COALESCE((s.fields_detected->'name')::boolean, false) AS name,
+          COALESCE((s.fields_detected->'card')::boolean, false) AS card,
+          COALESCE((s.fields_detected->'address')::boolean, false) AS address,
+          COALESCE((s.fields_detected->'age')::boolean, false) AS age,
+          COALESCE((s.fields_detected->'gender')::boolean, false) AS gender,
+          COALESCE((s.fields_detected->'country')::boolean, false) AS country
         FROM public.field_submissions s
         LEFT JOIN public.websites w ON w.id = s.website_id
         CROSS JOIN canon c
