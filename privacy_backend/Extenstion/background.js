@@ -36,12 +36,9 @@ async function isEnabled() {
 }
 
 async function getExtUserId() {
-  let { ext_user_id } = await chrome.storage.local.get("ext_user_id");
-  if (!ext_user_id) {
-    // Use the same user ID as the dashboard for consistency
-    ext_user_id = "f5ea28c1-6037-4340-a3dd-bfcbfde2e51d";
-    await chrome.storage.local.set({ ext_user_id });
-  }
+  // Always use the same user ID as the dashboard for consistency
+  const ext_user_id = "f5ea28c1-6037-4340-a3dd-bfcbfde2e51d";
+  await chrome.storage.local.set({ ext_user_id });
   return ext_user_id;
 }
 
