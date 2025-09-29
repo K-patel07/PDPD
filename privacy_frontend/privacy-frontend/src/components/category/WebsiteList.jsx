@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { fetchSitesByCategory } from "@/api/metrics.js";
 import { canonicalCategory } from "@/utils/categories";
 import { formatDuration } from "@/utils/formatters"; // for tooltip
+import EmptyState from "../EmptyState";
 
 const cx = (...a) => a.filter(Boolean).join(" ");
 
@@ -287,7 +288,7 @@ export default function WebsiteList({
         ))}
 
         {!loading && !err && !preview && filtered.length === 0 && (
-          <div className="empty-state">No websites found.</div>
+          <EmptyState categoryName={normCategory} />
         )}
       </div>
     </div>

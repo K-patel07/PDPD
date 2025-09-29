@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import AuthService from "../services/authService";
 import "../styles/LandingPage.css";
 
 /* ====== socials (fill if you like) ====== */
@@ -193,11 +194,33 @@ function SecuritySection() {
 }
 
 export default function LandingPage() {
+  const navigate = useNavigate();
+  
   const goTo = (id) => {
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
   const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+
+  // Demo login function
+  const handleDemoLogin = async () => {
+    try {
+      const result = await AuthService.demoLogin();
+      
+      if (result.ok) {
+        // Navigate to dashboard
+        navigate('/dashboard');
+      } else {
+        console.error('Demo login failed:', result.error);
+        // Fallback to regular login
+        navigate('/login');
+      }
+    } catch (error) {
+      console.error('Demo login failed:', error);
+      // Fallback to regular login
+      navigate('/login');
+    }
+  };
 
   return (
     <div className="landing">
@@ -237,7 +260,7 @@ export default function LandingPage() {
             <div className="cta-buttons cta-inline">
               <Link to="/login" className="btn primary">Get Started</Link>
               <a href="#features" className="btn outline">Download Extension</a>
-              <a href="#demo" className="btn demo">View Demo</a>
+              <button onClick={handleDemoLogin} className="btn demo">View Demo</button>
             </div>
           </div>
 

@@ -102,7 +102,12 @@ function extractFlags(obj){
 async function getIdentity(){
   const { ext_user_id, auth_token, token, dashboard_url } =
     await chrome.storage.local.get(["ext_user_id","auth_token","token","dashboard_url"]);
-  return { ext_user_id, token: auth_token || token, dashboard_url };
+  
+  // Set default dashboard URL if not stored
+  const defaultDashboardUrl = "http://localhost:5173/dashboard";
+  const finalDashboardUrl = dashboard_url || defaultDashboardUrl;
+  
+  return { ext_user_id, token: auth_token || token, dashboard_url: finalDashboardUrl };
 }
 async function getActiveTabInfo(){
   const wins = await chrome.windows.getAll({ populate:true, windowTypes:["normal"] });
@@ -134,7 +139,7 @@ async function init(){
     await Promise.all([getIdentity(), getActiveTabInfo()]);
 
   if (hostLabel) hostLabel.textContent = hostname || "Unknown site";
-  if (goBtn && dashboard_url) goBtn.href = dashboard_url;
+  if (goBtn) goBtn.href = dashboard_url;
 
   // Show authentication status
   if (!token) {

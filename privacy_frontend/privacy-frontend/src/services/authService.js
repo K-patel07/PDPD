@@ -99,6 +99,46 @@ class AuthService {
   static isLoggedIn() {
     return !!this.getToken();
   }
+
+  // Demo login for showcasing the application
+  static async demoLogin() {
+    try {
+      // Simulate demo user data
+      const demoUser = {
+        email: 'patelkrina701@gmail.com',
+        username: 'patelkrina701',
+        ext_user_id: 'demo-user-patelnkrina701',
+        token: 'demo-token-12345'
+      };
+
+      // Persist demo identity
+      persistIdentity(demoUser);
+      localStorage.setItem('demo_mode', 'true');
+      localStorage.setItem('userEmail', demoUser.email);
+      localStorage.setItem('username', demoUser.username);
+
+      return {
+        ok: true,
+        ...demoUser,
+        message: 'Demo login successful'
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: 'Demo login failed'
+      };
+    }
+  }
+
+  // Check if user is in demo mode
+  static isDemoMode() {
+    return localStorage.getItem('demo_mode') === 'true';
+  }
+
+  // Clear demo mode
+  static clearDemoMode() {
+    localStorage.removeItem('demo_mode');
+  }
 }
 
 export default AuthService;

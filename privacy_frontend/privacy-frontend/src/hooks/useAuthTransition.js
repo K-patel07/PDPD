@@ -32,12 +32,16 @@ export const useAuthTransition = () => {
     // Determine transition direction
     const isGoingToSignup = targetRoute.includes('signup');
     
-    // Phase 1: Slide out current content (500ms)
+    // Phase 1: Smooth slide out current content (400ms)
+    currentForm.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+    currentHero.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+    
     currentForm.classList.add(isGoingToSignup ? 'slide-out-left' : 'slide-out-right');
     currentHero.classList.add(isGoingToSignup ? 'slide-out-right' : 'slide-out-left');
     
-    // Phase 2: Start rotating circle (600ms)
+    // Phase 2: Start rotating card with smooth scaling (500ms)
     setTimeout(() => {
+      card.style.transition = 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
       card.classList.add('transitioning');
       
       // Add 120 degrees to current rotation and loop every 360 degrees
@@ -52,20 +56,25 @@ export const useAuthTransition = () => {
       } else if (currentRotation === 0) {
         card.classList.add('rotate-360');
       }
-    }, 600);
+    }, 400);
     
-    // Phase 3: Navigate during rotation (1000ms)
+    // Phase 3: Navigate during rotation (800ms)
     setTimeout(() => {
       navigate(targetRoute);
-    }, 1000);
+    }, 800);
     
-    // Phase 4: Complete rotation and start sliding in content (1400ms)
+    // Phase 4: Complete rotation and start sliding in content (1200ms)
     setTimeout(() => {
       const newCard = document.querySelector('.auth-card');
       const newHero = document.querySelector('.auth-hero');
       const newForm = document.querySelector('.auth-form');
       
       if (newCard && newHero && newForm) {
+        // Reset transitions for new elements
+        newCard.style.transition = '';
+        newHero.style.transition = '';
+        newForm.style.transition = '';
+        
         // Hide rotating circle
         newCard.classList.remove('transitioning');
         
@@ -77,11 +86,11 @@ export const useAuthTransition = () => {
         setTimeout(() => {
           newForm.classList.add('active');
           newHero.classList.add('active');
-        }, 100);
+        }, 50);
       }
-    }, 1400);
+    }, 1200);
     
-    // Phase 5: Clean up all classes (2200ms)
+    // Phase 5: Clean up all classes (1800ms)
     transitionTimeoutRef.current = setTimeout(() => {
       const newCard = document.querySelector('.auth-card');
       const newHero = document.querySelector('.auth-hero');
@@ -94,10 +103,15 @@ export const useAuthTransition = () => {
         // Clean up slide classes
         newForm.classList.remove('slide-in-right', 'slide-in-left', 'active', 'slide-out-left', 'slide-out-right');
         newHero.classList.remove('slide-in-left', 'slide-in-right', 'active', 'slide-out-left', 'slide-out-right');
+        
+        // Reset inline styles
+        newCard.style.transition = '';
+        newHero.style.transition = '';
+        newForm.style.transition = '';
       }
       
       setIsTransitioning(false);
-    }, 2200);
+    }, 1800);
   };
 
   return { triggerTransition, isTransitioning };
