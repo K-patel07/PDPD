@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { normalizeHost } from "@/utils/hostname";   // ✅ NEW import
+import http from "@/api/http";
 
 const RISK = {
   1: { tone: "low",  color: "#22c55e", label: "low1"  },
@@ -28,13 +29,14 @@ export default function TopSitesRiskCard({ extUserId, limit = 5, endpoint = "/ap
       setNote("");
       try {
         const url = `${endpoint}?extUserId=${encodeURIComponent(extUserId)}&limit=${encodeURIComponent(limit)}`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const { items = [] } = await res.json();
+        const res = await http.get(endpoint, {
+          params: { extUserId, limit }
+        });
+        const { items = [] } = res.data;
 
         const mapped = items.map(it => ({
           domain: normalizeHost(it.hostname),
-          risk_level: scoreToLevel(it.score),
+          risk_level: scoreToLevel(it.risk_score),
           visits: it.visits ?? 0,
         }));
 
