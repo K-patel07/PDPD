@@ -219,22 +219,24 @@ export default function Category() {
           </div>
 
           <div className="top-actions">
-            <label className="search hover-lift">
-              <input
-                type="text"
-                placeholder=""
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && onSearch(e)}
-                aria-label="Search here"
-              />
-              <button
-                type="button"
-                className="icon-btn"
-                aria-label="Search"
-                onClick={onSearch}
-              />
-            </label>
+            {selectedHostname && (
+              <label className="search hover-lift">
+                <input
+                  type="text"
+                  placeholder=""
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && onSearch(e)}
+                  aria-label="Search here"
+                />
+                <button
+                  type="button"
+                  className="icon-btn"
+                  aria-label="Search"
+                  onClick={onSearch}
+                />
+              </label>
+            )}
             <ThemeToggle className="toggle" />
           </div>
         </header>
