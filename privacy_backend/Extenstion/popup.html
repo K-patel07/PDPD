@@ -37,10 +37,18 @@
     .pill-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .pill{
       display:inline-block;padding:10px 12px;border:1px solid var(--ring);border-radius:12px;
-      background:#fafbff;opacity:.6;font-weight:600;color:#111827;
+      background:#f3f4f6;opacity:.5;font-weight:600;color:#6b7280;
       cursor:default; user-select:none; pointer-events:none;
+      transition:all .2s ease;
     }
-    .pill.on{opacity:1;border-color:#6aa6ff;box-shadow:0 0 0 3px rgba(106,166,255,.18)}
+    .pill.on{
+      opacity:1;
+      background:#dbeafe;
+      border:2px solid #3b82f6;
+      color:#1e40af;
+      font-weight:700;
+      box-shadow:0 0 0 3px rgba(59,130,246,.2);
+    }
 
     /* footer */
     .footer{text-align:center;margin-top:8px}
