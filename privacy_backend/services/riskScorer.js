@@ -2,16 +2,15 @@
 
 /**
  * Field weights for risk calculation (0-1 scale)
- * Higher weights = more sensitive data = higher risk
+ * Keep these identical to instructions
  */
 const fieldWeights = {
-  card: 0.9,      // Most sensitive - credit card details
-  password: 0.8,  // High sensitivity - passwords
-  email: 0.4,     // Medium-high - email addresses
-  phone: 0.3,     // Medium - phone numbers
-  address: 0.25,  // Medium - physical addresses
-  name: 0.15,     // Low-medium - names
-  age: 0.1,       // Low - age information
+  card: 0.80,     // Most sensitive - credit card details
+  address: 0.30,  // Medium - physical addresses
+  email: 0.20,    // Medium-high - email addresses
+  phone: 0.20,    // Medium - phone numbers
+  name: 0.10,     // Low-medium - names
+  age: 0.05,      // Low - age information
   gender: 0.05,   // Very low - gender
   country: 0.05,  // Very low - country
 };
@@ -50,45 +49,39 @@ function bandFromPercent(pct) {
 }
 
 /**
- * Compute combined risk using the proper weighted formula
- * RiskRaw = (0.6 * PhishingScore) + (0.35 * FieldRisk) + (0.05 * TrackerFlag)
- * RiskPct = clamp(round(RiskRaw * 100), 0, 100)
+ * Compute combined risk using the exact formula from instructions
+ * combined_risk = clamp0to1( (data_risk + phishing_risk) / 2 )
+ * risk_score = round( combined_risk * 100 ) → integer [0..100]
  * 
  * Flexible args:
- *   computeRisk(fields, phishingScore, hostname, trackerRisk)
- *   OR computeRisk(phishingScore, fields, hostname, trackerRisk)
+ *   computeRisk(fields, phishingScore, hostname)
+ *   OR computeRisk(phishingScore, fields, hostname)
  */
-function computeRisk(a, b, c, d) {
+function computeRisk(a, b, c) {
   let fields = {};
   let phishingScore = 0;
   let hostname = null;
-  let trackerRisk = 0;
 
   // Support both call styles without breaking callers
   if (typeof a === "number") {
     phishingScore = a;
     fields = b || {};
     hostname = c ?? null;
-    trackerRisk = d ?? 0;
   } else {
     fields = a || {};
     phishingScore = typeof b === "number" ? b : 0;
     hostname = c ?? null;
-    trackerRisk = d ?? 0;
   }
 
   // Normalize scores to [0,1]
   const ps = Math.max(0, Math.min(1, Number(phishingScore) || 0));
-  const tr = Math.max(0, Math.min(1, Number(trackerRisk) || 0));
 
   // Calculate individual risk components
   const data_risk_num = computeFieldRisk(fields);         // 0–1
   const phishing_risk_num = ps;                           // 0–1
-  const tracker_risk_num = tr;                            // 0–1
 
-  // Apply the weighted formula: 60% phishing + 35% fields + 5% trackers
-  const riskRaw = (0.6 * phishing_risk_num) + (0.35 * data_risk_num) + (0.05 * tracker_risk_num);
-  const combined_risk_num = Math.max(0, Math.min(1, riskRaw));
+  // Apply the exact formula: (data_risk + phishing_risk) / 2
+  const combined_risk_num = Math.max(0, Math.min(1, (data_risk_num + phishing_risk_num) / 2));
 
   // Convert to percentage and round
   const risk_score = Math.round(combined_risk_num * 100); // 0–100
@@ -103,7 +96,6 @@ function computeRisk(a, b, c, d) {
     band,
     // kept for convenience in logs (not stored in DB):
     hostname,
-    tracker_risk: Number(tracker_risk_num.toFixed(4)),
   };
 }
 

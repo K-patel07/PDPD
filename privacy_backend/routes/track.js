@@ -378,10 +378,10 @@ router.post("/visit", async (req, res) => {
 
       const riskRaw = (await computeRisk(fields_detected || {}, phishingRisk, hostname)) || {};
       const payload = {
-        phishing_risk: clampNum(riskRaw.phishing_risk ?? phishingRisk, 0, 1, 0),
-        data_risk:     clampNum(riskRaw.data_risk ?? 0, 0, 1, 0),
-        combined_risk: clampNum(riskRaw.combined_risk ?? ((phishingRisk + (riskRaw.data_risk ?? 0)) / 2), 0, 1, 0),
-        risk_score:    clampNum(riskRaw.risk_score ?? riskRaw.combined_risk ?? phishingRisk, 0, 1, 0),
+        phishing_risk: Number((riskRaw.phishing_risk ?? phishingRisk) || 0), // 0..1
+        data_risk:     Number((riskRaw.data_risk ?? 0) || 0),                // 0..1
+        combined_risk: Number((riskRaw.combined_risk ?? 0) || 0),            // 0..1
+        risk_score:    Math.min(100, Math.max(0, Math.round(Number(riskRaw.risk_score ?? 0)))), // 0..100
         band:          String(riskRaw.band || "Unknown"),
       };
 
@@ -583,8 +583,7 @@ router.post("/submit", requireAuth, async (req, res) => {
       const ph = await classifyPhishing(hostname);
       const phishingRisk = clampNum(ph?.phishingScore ?? ph?.score ?? 0, 0, 1, 0);
       
-      // Calculate tracker risk
-      const trackerRisk = calculateTrackerRisk(hostname);
+      // Tracker risk calculation removed - using exact formula from instructions
 
       const flags = {
         name: submitted.submitted_name,
@@ -597,8 +596,8 @@ router.post("/submit", requireAuth, async (req, res) => {
         country: submitted.submitted_country,
       };
       
-      // Use the new weighted risk calculation with tracker risk
-      const risk = computeRisk(flags, phishingRisk, hostname, trackerRisk) || {};
+      // Use the exact risk calculation formula
+      const risk = computeRisk(flags, phishingRisk, hostname) || {};
       await db.query(
         `
         INSERT INTO public.risk_assessments
@@ -616,10 +615,10 @@ router.post("/submit", requireAuth, async (req, res) => {
         [
           website_id,
           ext_user_id,
-          clampNum(risk.phishing_risk ?? phishingRisk, 0, 1, 0),
-          clampNum(risk.data_risk ?? 0, 0, 1, 0),
-          clampNum(risk.combined_risk ?? ((phishingRisk + (risk.data_risk ?? 0)) / 2), 0, 1, 0),
-          clampNum(risk.risk_score ?? risk.combined_risk ?? phishingRisk, 0, 1, 0),
+          Number((risk.phishing_risk ?? phishingRisk) || 0), // 0..1
+          Number((risk.data_risk ?? 0) || 0),                // 0..1
+          Number((risk.combined_risk ?? 0) || 0),            // 0..1
+          Math.min(100, Math.max(0, Math.round(Number(risk.risk_score ?? 0)))), // 0..100
           String(risk.band || "Unknown"),
         ]
       );
@@ -629,7 +628,7 @@ router.post("/submit", requireAuth, async (req, res) => {
 
     // log helpful info once
     const trueKeys = Object.entries(submitted).filter(([, v]) => v).map(([k]) => k).join(", ");
-    console.log(`[submit] saved: ${hostname} user:${ext_user_id} flags{ ${trueKeys} } risk:${risk.risk_score}% (phishing:${(phishingRisk*100).toFixed(1)}% data:${(risk.data_risk*100).toFixed(1)}% tracker:${(trackerRisk*100).toFixed(1)}%)`);
+    console.log(`[submit] saved: ${hostname} user:${ext_user_id} flags{ ${trueKeys} } risk:${risk.risk_score}% (phishing:${(phishingRisk*100).toFixed(1)}% data:${(risk.data_risk*100).toFixed(1)}%)`);
 
     // Debug: Check if data was actually inserted
     try {
