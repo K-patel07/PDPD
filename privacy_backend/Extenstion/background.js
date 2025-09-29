@@ -251,47 +251,21 @@ async function sendVisit(payload) {
 
 async function sendSubmit(payload) {
   const { ext_user_id, token } = await getIdentity();
-
-  // Reduced logging for form submissions
-  console.log("[sendSubmit] Processing form submission for:", payload.hostname);
-
-  // Guard: ensure at least one meaningful flag
-  const fd = payload.fields_detected || {};
-  const hasFD = fd && typeof fd === "object" && Object.values(fd).some(Boolean);
-  const submittedKeys = [
-    "submitted_name","submitted_email","submitted_phone","submitted_card",
-    "submitted_address","submitted_age","submitted_gender","submitted_country"
-  ];
-  const hasSubmitted = submittedKeys.some(k => !!payload[k]);
   
-  // Reduced logging for form validation
+  console.log(`[sendSubmit] Tracking form submission to ${payload.hostname} for user ${ext_user_id}`);
   
-  if (!hasFD && !hasSubmitted) {
-    console.log("[sendSubmit] No form fields detected, skipping");
-    return false;
+  // Try without authentication first (submit tracking should work without auth, like visit API)
+  let success = await postJSON("/api/track/submit", { ...payload, ext_user_id }, 0, false);
+  
+  if (!success && token) {
+    // If unauthenticated fails and we have a token, try with auth
+    success = await postJSON("/api/track/submit", { ...payload, ext_user_id }, 0, true);
   }
-
-  // Skip if no authentication token
-  if (!token) {
-    // Only log once per session to avoid spam
-    const lastLogKey = "last_token_warning";
-    const { [lastLogKey]: lastLog } = await chrome.storage.local.get(lastLogKey);
-    const now = Date.now();
-    
-    if (!lastLog || now - lastLog > 300000) { // 5 minutes
-      console.log("[sendSubmit] Form tracking requires authentication. Please log in via the extension options page");
-      await chrome.storage.local.set({ [lastLogKey]: now });
-    }
-    return false;
-  }
-
-  // postJSON now handles retries internally
-  const success = await postJSON("/api/track/submit", { ...payload, ext_user_id }, 0, true);
   
   if (success) {
-    console.log(`[sendSubmit] Successfully sent form submission for ${payload.hostname}`);
+    console.log(`[sendSubmit] Successfully tracked form submission to ${payload.hostname}`);
   } else {
-    console.warn(`[sendSubmit] Failed to send form submission for ${payload.hostname}, queuing for offline retry`);
+    console.warn(`[sendSubmit] Failed to track form submission to ${payload.hostname}, queuing for retry`);
     // Queue for retry when offline
     await addToOfflineQueue({
       path: "/api/track/submit",
@@ -470,12 +444,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         if (!data?.hostname) { 
           sendResponse({ ok: false, error: "hostname missing" }); 
           return; 
-        }
-
-        const { token } = await getIdentity();
-        if (!token) {
-          sendResponse({ ok: false, error: "Authentication required. Please log in via the extension options page." });
-          return;
         }
 
         const screen_time_seconds = await estimateScreenTimeFor(data.hostname);
