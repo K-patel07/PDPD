@@ -45,15 +45,18 @@ function applyRisk(score=0){
   if (lblEl) lblEl.textContent = `${band} Risk Level`;
   if (gauge) {
     gauge.setAttribute("data-risk", band.toLowerCase());
-    // Gauge starts from right (90deg) and fills counterclockwise to left (270deg)
+    // Barometer: starts from right (90deg) and fills counterclockwise to left
     const deg=(n/100)*180;
+    const startAngle = 90; // right position
+    const endAngle = 90 - deg; // rotate counterclockwise
     // Risk color based on band
     let riskColor = '#22c55e'; // green for safe
     if (band==='Critical') riskColor='#dc2626';
     else if (band==='High') riskColor='#ea580c';
     else if (band==='Moderate') riskColor='#f59e0b';
     else if (band==='Low') riskColor='#84cc16';
-    gauge.style.background=`conic-gradient(from 90deg, ${riskColor} 0deg ${deg}deg, #f0f0f0 ${deg}deg 180deg)`;
+    // Fill from right to left (counterclockwise)
+    gauge.style.background=`conic-gradient(from ${endAngle}deg, ${riskColor} 0deg ${deg}deg, #f0f0f0 ${deg}deg 180deg)`;
   }
 }
 
