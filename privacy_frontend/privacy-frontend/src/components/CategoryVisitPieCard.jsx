@@ -115,7 +115,7 @@ export default function CategoryVisitPieCard({
   useEffect(() => {
     let cancelled = false;
 
-    (async () => {
+    async function fetchData() {
       if (!extUserId) {
         setRows(ORDER.map(c => ({ category: c, risk_pct: 0 })));
         setLoading(false);
@@ -151,9 +151,29 @@ export default function CategoryVisitPieCard({
       } finally {
         if (!cancelled) setLoading(false);
       }
-    })();
+    }
 
-    return () => { cancelled = true; };
+    // Initial load
+    fetchData();
+
+    // Auto-refresh every 15 seconds
+    const pollInterval = setInterval(() => {
+      if (!cancelled) fetchData();
+    }, 15000);
+
+    // Refresh when page becomes visible
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !cancelled) {
+        fetchData();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      clearInterval(pollInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [extUserId, ORDER]);
 
   /* -------------------------- computed display -------------------------- */

@@ -113,9 +113,26 @@ export default function Category() {
       }
     }
 
+    // Initial load
     load();
+    
+    // Auto-refresh every 20 seconds
+    const pollInterval = setInterval(() => {
+      if (!cancelled) load();
+    }, 20000);
+    
+    // Refresh when page becomes visible
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !cancelled) {
+        load();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
     return () => {
       cancelled = true;
+      clearInterval(pollInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [extUserId, categoryName]); // reload when user or category changes
 

@@ -237,6 +237,12 @@ async function sendVisit(payload) {
   
   if (success) {
     console.log(`[sendVisit] Successfully tracked visit to ${payload.hostname}`);
+    // Notify dashboard to refresh (if open in same browser)
+    try {
+      await chrome.storage.local.set({ last_visit_event: Date.now() });
+    } catch (e) {
+      console.warn('[sendVisit] Failed to set storage event:', e);
+    }
   } else {
     console.warn(`[sendVisit] Failed to track visit to ${payload.hostname}, queuing for retry`);
     // Queue for retry when offline
@@ -264,6 +270,12 @@ async function sendSubmit(payload) {
   
   if (success) {
     console.log(`[sendSubmit] Successfully tracked form submission to ${payload.hostname}`);
+    // Notify dashboard to refresh (if open in same browser)
+    try {
+      await chrome.storage.local.set({ last_visit_event: Date.now() });
+    } catch (e) {
+      console.warn('[sendSubmit] Failed to set storage event:', e);
+    }
   } else {
     console.warn(`[sendSubmit] Failed to track form submission to ${payload.hostname}, queuing for retry`);
     // Queue for retry when offline

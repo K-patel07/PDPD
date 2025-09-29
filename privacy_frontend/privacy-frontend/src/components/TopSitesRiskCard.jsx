@@ -24,6 +24,7 @@ export default function TopSitesRiskCard({ extUserId, limit = 5, endpoint = "/ap
 
   useEffect(() => {
     let ignore = false;
+    
     async function fetchData() {
       setLoading(true);
       setNote("");
@@ -42,7 +43,7 @@ export default function TopSitesRiskCard({ extUserId, limit = 5, endpoint = "/ap
 
         if (!ignore) {
           if (items.length === 0) {
-            setNote("No visits found in database");  // ✅ clearer than dummy data
+            setNote("No visits found in database");
             setRows([]);
           } else {
             setRows(mapped.slice(0, limit));
@@ -50,15 +51,35 @@ export default function TopSitesRiskCard({ extUserId, limit = 5, endpoint = "/ap
         }
       } catch (e) {
         if (!ignore) {
-          setNote("Error loading data");  // ✅ error message instead of fake data
+          setNote("Error loading data");
           setRows([]);
         }
       } finally {
         if (!ignore) setLoading(false);
       }
     }
+    
+    // Initial load
     fetchData();
-    return () => { ignore = true; };
+    
+    // Auto-refresh every 15 seconds
+    const pollInterval = setInterval(() => {
+      if (!ignore) fetchData();
+    }, 15000);
+    
+    // Refresh when page becomes visible
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !ignore) {
+        fetchData();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      ignore = true;
+      clearInterval(pollInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [extUserId, limit, endpoint]);
 
   return (
