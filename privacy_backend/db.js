@@ -12,6 +12,7 @@ const hasUrl =
   typeof process.env.DATABASE_URL === "string" &&
   /^postgres(ql)?:\/\//i.test(process.env.DATABASE_URL.trim());
 
+// For Render deployment, use SSL only if explicitly set
 const wantSSL = String(process.env.DB_SSL || "").toLowerCase() === "true";
 const sslOption = wantSSL ? { rejectUnauthorized: false } : false;
 
@@ -39,8 +40,11 @@ pool
   try {
     const r = await pool.query('SELECT current_database() db, current_user "user"');
     console.log("[DB] connected to", r.rows[0]);
+    console.log(`[DB] SSL enabled: ${sslOption ? 'yes' : 'no'}`);
   } catch (e) {
     console.error("[DB] connection test failed:", e.message);
+    console.error("[DB] DATABASE_URL present:", !!process.env.DATABASE_URL);
+    console.error("[DB] DB_SSL setting:", process.env.DB_SSL);
   }
 })();
 
