@@ -466,14 +466,14 @@ router.get("/provided-data/site", async (req, res, next) => {
           s.website_id,
           s.created_at,
           COALESCE(s.screen_time_seconds, 0) AS screen_time_seconds,
-          ${F.email}   AS email,
-          ${F.phone}   AS phone,
-          ${F.name}    AS name,
-          ${F.card}    AS card,
-          ${F.address} AS address,
-          ${F.age}     AS age,
-          ${F.gender}  AS gender,
-          ${F.country} AS country
+          COALESCE(s.submitted_email, false) AS email,
+          COALESCE(s.submitted_phone, false) AS phone,
+          COALESCE(s.submitted_name, false) AS name,
+          COALESCE(s.submitted_card, false) AS card,
+          COALESCE(s.submitted_address, false) AS address,
+          COALESCE(s.submitted_age, false) AS age,
+          COALESCE(s.submitted_gender, false) AS gender,
+          COALESCE(s.submitted_country, false) AS country
         FROM public.field_submissions s
         LEFT JOIN public.websites w ON w.id = s.website_id
         CROSS JOIN canon c
