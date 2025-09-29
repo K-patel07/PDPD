@@ -12,7 +12,7 @@ const { detectCategoryForVisit } = require("../services/categorizer");
 const { classifyPhishing } = require("../services/phishingModel");
 const computeRisk = require("../services/riskScorer"); // returns { phishing_risk,data_risk,combined_risk,risk_score,band }
 const { isTracker } = require("../services/blocklist");
-const { calculateTrackerRisk } = require("../services/trackerDetector");
+// const { calculateTrackerRisk } = require("../services/trackerDetector"); // Removed - not used in new risk calculation
 
 /* ----------------------------- Config ------------------------------ */
 const SESSION_TIMEOUT_MINUTES = 30;
