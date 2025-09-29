@@ -372,46 +372,49 @@ router.post("/visit", async (req, res) => {
     }
 
     /* -------- Risk upsert (best-effort; never blocks main flow) -------- */
-    try {
-      const ph = await classifyPhishing(hostname);
-      const phishingRisk = clampNum(ph?.phishingScore ?? ph?.score ?? 0, 0, 1, 0);
+    // Run risk calculation asynchronously to avoid blocking the response
+    setImmediate(async () => {
+      try {
+        const ph = await classifyPhishing(hostname);
+        const phishingRisk = clampNum(ph?.phishingScore ?? ph?.score ?? 0, 0, 1, 0);
 
-      const riskRaw = (await computeRisk(fields_detected || {}, phishingRisk, hostname)) || {};
-      const payload = {
-        phishing_risk: Number((riskRaw.phishing_risk ?? phishingRisk) || 0), // 0..1
-        data_risk:     Number((riskRaw.data_risk ?? 0) || 0),                // 0..1
-        combined_risk: Number((riskRaw.combined_risk ?? 0) || 0),            // 0..1
-        risk_score:    Math.min(100, Math.max(0, Math.round(Number(riskRaw.risk_score ?? 0)))), // 0..100
-        band:          String(riskRaw.band || "Unknown"),
-      };
+        const riskRaw = (await computeRisk(fields_detected || {}, phishingRisk, hostname)) || {};
+        const payload = {
+          phishing_risk: Number((riskRaw.phishing_risk ?? phishingRisk) || 0), // 0..1
+          data_risk:     Number((riskRaw.data_risk ?? 0) || 0),                // 0..1
+          combined_risk: Number((riskRaw.combined_risk ?? 0) || 0),            // 0..1
+          risk_score:    Math.min(100, Math.max(0, Math.round(Number(riskRaw.risk_score ?? 0)))), // 0..100
+          band:          String(riskRaw.band || "Unknown"),
+        };
 
-      await db.query(
-        `
-        INSERT INTO public.risk_assessments
-          (website_id, ext_user_id, phishing_risk, data_risk, combined_risk, risk_score, band, created_at, updated_at)
-        VALUES ($1,$2,$3,$4,$5,$6,$7, NOW(), NOW())
-        ON CONFLICT (website_id, ext_user_id)
-        DO UPDATE SET
-          phishing_risk = EXCLUDED.phishing_risk,
-          data_risk     = EXCLUDED.data_risk,
-          combined_risk = EXCLUDED.combined_risk,
-          risk_score    = EXCLUDED.risk_score,
-          band          = EXCLUDED.band,
-          updated_at    = NOW();
-        `,
-        [
-          website_id,
-          ext_user_id,
-          payload.phishing_risk,
-          payload.data_risk,
-          payload.combined_risk,
-          payload.risk_score,
-          payload.band,
-        ]
-      );
-    } catch (e) {
-      console.warn("[visit -> risk] non-fatal:", e?.message || e);
-    }
+        await db.query(
+          `
+          INSERT INTO public.risk_assessments
+            (website_id, ext_user_id, phishing_risk, data_risk, combined_risk, risk_score, band, created_at, updated_at)
+          VALUES ($1,$2,$3,$4,$5,$6,$7, NOW(), NOW())
+          ON CONFLICT (website_id, ext_user_id)
+          DO UPDATE SET
+            phishing_risk = EXCLUDED.phishing_risk,
+            data_risk     = EXCLUDED.data_risk,
+            combined_risk = EXCLUDED.combined_risk,
+            risk_score    = EXCLUDED.risk_score,
+            band          = EXCLUDED.band,
+            updated_at    = NOW();
+          `,
+          [
+            website_id,
+            ext_user_id,
+            payload.phishing_risk,
+            payload.data_risk,
+            payload.combined_risk,
+            payload.risk_score,
+            payload.band,
+          ]
+        );
+      } catch (e) {
+        console.warn("[visit -> risk] non-fatal:", e?.message || e);
+      }
+    });
 
     return res.sendStatus(204);
   } catch (err) {
