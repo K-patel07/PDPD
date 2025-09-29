@@ -52,7 +52,7 @@
 }
 
 .global-search-container .search .icon-btn::after {
-  content: "🔍";
+  content: "ℹ️";
   font-size: 14px;
 }
 

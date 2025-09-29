@@ -414,6 +414,14 @@ header#top {
   filter: brightness(0) !important;
 }
 
+/* Category label colors for light/dark mode */
+.theme-light .category-scroll .category .category-label {
+  color: white !important;
+}
+.theme-dark .category-scroll .category .category-label {
+  color: black !important;
+}
+
 :root{
   /* distance between chips */
   --cat-chip-gap: 12px;

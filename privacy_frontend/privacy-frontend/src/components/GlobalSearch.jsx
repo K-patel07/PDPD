@@ -170,8 +170,9 @@ export default function GlobalSearch() {
         />
         <button 
           className="icon-btn" 
-          aria-label="Search" 
+          aria-label="Search info" 
           onClick={handleSearch}
+          title="Search websites"
         />
       </label>
 

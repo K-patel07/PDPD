@@ -71,6 +71,16 @@ const IconSecurity = () => (
   </svg>
 );
 
+const IconDashboard = () => (
+  <svg className="kf-icon" viewBox="0 0 24 24" fill="none">
+    <KfGrad id="g-dash" />
+    <rect x="3" y="3" width="7" height="7" rx="1" stroke="url(#g-dash)" strokeWidth="1.8" />
+    <rect x="14" y="3" width="7" height="7" rx="1" stroke="url(#g-dash)" strokeWidth="1.8" />
+    <rect x="3" y="14" width="7" height="7" rx="1" stroke="url(#g-dash)" strokeWidth="1.8" />
+    <rect x="14" y="14" width="7" height="7" rx="1" stroke="url(#g-dash)" strokeWidth="1.8" />
+  </svg>
+);
+
 /** TriangleOrbit (unchanged) */
 function TriangleOrbit({
   children, radius = 320, tilt = 18, friction = 0.93, sensitivity = 0.35,
@@ -291,6 +301,7 @@ export default function LandingPage() {
           <article className="kf-card"><IconEngine /><h3 className="kf-card-title">Smart Risk Engine</h3><p className="kf-text">AI logic assigns accurate risk levels.</p></article>
           <article className="kf-card"><IconRealtime /><h3 className="kf-card-title">Real-Time Monitoring</h3><p className="kf-text">Continuous tracking with instant updates.</p></article>
           <article className="kf-card"><IconSecurity /><h3 className="kf-card-title">Built-In Security</h3><p className="kf-text">Strong auth, encryption, and DB safeguards.</p></article>
+          <article className="kf-card"><IconDashboard /><h3 className="kf-card-title">Interactive Dashboard</h3><p className="kf-text">User-friendly interface that lets you browse through PrivacyPulse easily.</p></article>
         </div>
       </section>
 

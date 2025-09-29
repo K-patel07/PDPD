@@ -11,6 +11,7 @@ import CenterTitle from "../components/category/CenterTitle.jsx";
 import ProvidedDataCard from "../components/category/ProvidedDataCard.jsx";
 import RiskCard from "../components/category/RiskCard.jsx";
 import ThemeToggle from "../components/ThemeToggle";
+import EmptyState from "../components/EmptyState";
 
 import {
   fetchProvidedDataForSite,
@@ -324,7 +325,7 @@ export default function Category() {
               </div>
             </>
           ) : (
-            <div className="center-page" />
+            <EmptyState categoryName={categoryName} />
           )}
         </section>
       </main>
