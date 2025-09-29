@@ -175,19 +175,32 @@ async function init(){
   if (!ext_user_id || !hostname){
     if (timeEl) timeEl.textContent="—";
     applyRisk(0); paintProvidedPills({});
+    console.warn('[popup] Missing ext_user_id or hostname', { ext_user_id, hostname });
     return;
   }
 
+  console.log('[popup] Loading data for:', { hostname, ext_user_id });
+
   // Try category insights first (uses same API as dashboard)
   const category = detectCategory(hostname);
+  console.log('[popup] Detected category:', category);
+  
   const catParams = new URLSearchParams({ ext_user_id, category });
   const categoryURL = `${API_BASE}/api/risk/track/sites?${catParams}`;
 
   try {
-    const sites = await fetchJSON(categoryURL, token).catch(()=>null);
+    console.log('[popup] Fetching category insights:', categoryURL);
+    const sites = await fetchJSON(categoryURL, token);
+    console.log('[popup] Category insights response:', sites);
+    
     if (sites && Array.isArray(sites) && sites.length > 0) {
-      // Find current site in category results
-      const currentSite = sites.find(s => stripWWW(s.hostname) === hostname);
+      // Find current site in category results (normalize both for comparison)
+      const normalizedHostname = stripWWW(hostname);
+      const currentSite = sites.find(s => stripWWW(s.hostname) === normalizedHostname);
+      
+      console.log('[popup] Looking for hostname:', normalizedHostname);
+      console.log('[popup] Available sites:', sites.map(s => stripWWW(s.hostname)));
+      console.log('[popup] Found site:', currentSite);
       
       if (currentSite) {
         // Use category insights data (includes everything)
@@ -205,17 +218,23 @@ async function init(){
           submitted_other: !!fieldsDetected.age
         };
         
+        console.log('[popup] Using category insights data:', { riskScore, screenSec, fieldsDetected });
         if (timeEl) timeEl.textContent = screenSec ? secondsToPretty(screenSec) : "—";
         applyRisk(riskScore);
         paintProvidedPills(flags);
         return;
+      } else {
+        console.warn('[popup] Site not found in category insights, trying fallback');
       }
+    } else {
+      console.warn('[popup] No sites in category response');
     }
   } catch(e) {
     console.warn('[popup] Category insights failed, falling back to site-specific:', e);
   }
 
   // Fallback: original site-specific API calls
+  console.log('[popup] Using fallback API calls');
   const params=new URLSearchParams({ hostname, extUserId: ext_user_id, ext_user_id: ext_user_id });
   const siteRiskURL = `${API_BASE}/api/metrics/site-risk?${params}`;
   const providedURL = `${API_BASE}/api/metrics/provided-data/site?${params}`;
@@ -223,22 +242,27 @@ async function init(){
   let riskScore=0, screenSec=null, flags={};
 
   try{
-    const riskJson = await fetchJSON(siteRiskURL, token).catch(()=>null);
+    console.log('[popup] Fetching site risk:', siteRiskURL);
+    const riskJson = await fetchJSON(siteRiskURL, token);
+    console.log('[popup] Site risk response:', riskJson);
     if (riskJson) {
       riskScore = pickRiskScore(riskJson);
       screenSec = pickScreenSeconds(riskJson);
     }
 
-    const provJson = await fetchJSON(providedURL, token).catch(()=>null);
+    console.log('[popup] Fetching provided data:', providedURL);
+    const provJson = await fetchJSON(providedURL, token);
+    console.log('[popup] Provided data response:', provJson);
     if (provJson) {
       if (!riskScore) riskScore = pickRiskScore(provJson);
       if (screenSec==null) screenSec = pickScreenSeconds(provJson);
       flags = extractFlags(provJson);
     }
   }catch(e){
-    // soft fail — leave defaults
+    console.error('[popup] Fallback APIs failed:', e);
   }
 
+  console.log('[popup] Final display values:', { riskScore, screenSec, flags });
   if (timeEl) timeEl.textContent = screenSec!=null ? secondsToPretty(screenSec) : "—";
   applyRisk(riskScore);
   paintProvidedPills(flags);
