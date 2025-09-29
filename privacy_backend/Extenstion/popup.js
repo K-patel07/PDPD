@@ -124,6 +124,18 @@ async function getActiveTabInfo(){
   }catch{ return { hostname:"", path:"/", full: raw }; }
 }
 
+// ----- Category Detection -----
+function detectCategory(hostname) {
+  const h = hostname.toLowerCase();
+  if (h.includes('facebook') || h.includes('instagram') || h.includes('twitter') || h.includes('tiktok') || h.includes('linkedin') || h.includes('reddit')) return 'Social Media';
+  if (h.includes('youtube') || h.includes('netflix') || h.includes('spotify') || h.includes('twitch') || h.includes('hulu')) return 'Entertainment';
+  if (h.includes('amazon') || h.includes('ebay') || h.includes('shop') || h.includes('store')) return 'Shopping';
+  if (h.includes('bank') || h.includes('paypal') || h.includes('stripe') || h.includes('finance')) return 'Finance';
+  if (h.includes('google') || h.includes('github') || h.includes('stackoverflow')) return 'Productivity';
+  if (h.includes('wikipedia') || h.includes('edu')) return 'Education';
+  return 'Others';
+}
+
 // ----- main -----
 async function init(){
   renderToggle(await getEnabled());
@@ -162,6 +174,44 @@ async function init(){
     return;
   }
 
+  // Try category insights first (uses same API as dashboard)
+  const category = detectCategory(hostname);
+  const catParams = new URLSearchParams({ ext_user_id, category });
+  const categoryURL = `${API_BASE}/api/risk/track/sites?${catParams}`;
+
+  try {
+    const sites = await fetchJSON(categoryURL, token).catch(()=>null);
+    if (sites && Array.isArray(sites) && sites.length > 0) {
+      // Find current site in category results
+      const currentSite = sites.find(s => stripWWW(s.hostname) === hostname);
+      
+      if (currentSite) {
+        // Use category insights data (includes everything)
+        const riskScore = currentSite.risk_score || 0;
+        const screenSec = currentSite.screen_time_seconds || 0;
+        const fieldsDetected = currentSite.fields_detected || {};
+        const flags = {
+          submitted_name: !!fieldsDetected.name,
+          submitted_email: !!fieldsDetected.email,
+          submitted_phone: !!fieldsDetected.phone,
+          submitted_address: !!fieldsDetected.address,
+          submitted_bank: !!fieldsDetected.card,
+          submitted_gender: !!fieldsDetected.gender,
+          submitted_country: !!fieldsDetected.country,
+          submitted_other: !!fieldsDetected.age
+        };
+        
+        if (timeEl) timeEl.textContent = screenSec ? secondsToPretty(screenSec) : "—";
+        applyRisk(riskScore);
+        paintProvidedPills(flags);
+        return;
+      }
+    }
+  } catch(e) {
+    console.warn('[popup] Category insights failed, falling back to site-specific:', e);
+  }
+
+  // Fallback: original site-specific API calls
   const params=new URLSearchParams({ hostname, extUserId: ext_user_id, ext_user_id: ext_user_id });
   const siteRiskURL = `${API_BASE}/api/metrics/site-risk?${params}`;
   const providedURL = `${API_BASE}/api/metrics/provided-data/site?${params}`;
@@ -172,13 +222,11 @@ async function init(){
     const riskJson = await fetchJSON(siteRiskURL, token).catch(()=>null);
     if (riskJson) {
       riskScore = pickRiskScore(riskJson);
-      // some builds only return band/score; screen time may not be here
       screenSec = pickScreenSeconds(riskJson);
     }
 
     const provJson = await fetchJSON(providedURL, token).catch(()=>null);
     if (provJson) {
-      // prefer risk from site-risk; else use nested risk here
       if (!riskScore) riskScore = pickRiskScore(provJson);
       if (screenSec==null) screenSec = pickScreenSeconds(provJson);
       flags = extractFlags(provJson);

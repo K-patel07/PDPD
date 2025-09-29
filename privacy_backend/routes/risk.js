@@ -251,10 +251,10 @@ router.get("/:hostname", async (req, res) => {
 
 router.get("/track/sites", async (req, res, next) => {
   try {
-    const extUserId = String(req.query.extUserId || "").trim();
+    const extUserId = String(req.query.ext_user_id || req.query.extUserId || "").trim();
     const category  = String(req.query.category || "").trim();
     if (!extUserId || !category) {
-      return res.status(400).json({ ok:false, error:"extUserId and category are required" });
+      return res.status(400).json({ ok:false, error:"ext_user_id and category are required" });
     }
 
     const sql = `
@@ -274,14 +274,47 @@ router.get("/track/sites", async (req, res, next) => {
           host,
           MIN(website_id)                        AS website_id,
           MAX(last_visited)                      AS last_visited,
-          SUM(vc)::int                           AS visit_counts,
+          SUM(vc)::int                           AS visits,
           SUM(st)::int                           AS screen_time_seconds
         FROM v
         GROUP BY host
+      ),
+      latest_risk AS (
+        SELECT DISTINCT ON (r.website_id)
+          r.website_id,
+          r.phishing_risk,
+          r.data_risk,
+          r.combined_risk,
+          r.risk_score,
+          r.band
+        FROM public.risk_assessments r
+        WHERE r.ext_user_id = $1
+        ORDER BY r.website_id, r.updated_at DESC
+      ),
+      latest_fields AS (
+        SELECT DISTINCT ON (fs.website_id)
+          fs.website_id,
+          fs.fields_detected
+        FROM public.field_submissions fs
+        WHERE fs.ext_user_id = $1
+        ORDER BY fs.website_id, fs.created_at DESC
       )
-      SELECT host AS hostname, website_id, last_visited, visit_counts, screen_time_seconds
+      SELECT 
+        agg.host AS hostname,
+        agg.website_id,
+        agg.last_visited,
+        agg.visits,
+        agg.screen_time_seconds,
+        COALESCE(lr.phishing_risk, 0) AS phishing_risk,
+        COALESCE(lr.data_risk, 0) AS data_risk,
+        COALESCE(lr.combined_risk, 0) AS combined_risk,
+        COALESCE(lr.risk_score, 0) AS risk_score,
+        COALESCE(lr.band, 'Safe') AS band,
+        COALESCE(lf.fields_detected, '{}'::jsonb) AS fields_detected
       FROM agg
-      ORDER BY host ASC;
+      LEFT JOIN latest_risk lr ON lr.website_id = agg.website_id
+      LEFT JOIN latest_fields lf ON lf.website_id = agg.website_id
+      ORDER BY agg.host ASC;
     `;
     const { rows } = await db.pool.query(sql, [extUserId, category]);
     res.json(rows);
