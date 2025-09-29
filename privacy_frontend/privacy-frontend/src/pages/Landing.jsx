@@ -157,8 +157,8 @@ function TriangleOrbit({
   );
 }
 
-/** Laptop mockup (unchanged) */
-function LaptopMockup({ imgSrc = "/src/assets/dashboard-ss.png" }) {
+/** Laptop mockup */
+function LaptopMockup({ imgSrc = "/Screen-1.png" }) {
   return (
     <div className="laptop-container">
       <div className="laptop-mockup">
@@ -277,9 +277,9 @@ export default function LandingPage() {
           <div className="hero-dashboard">
             <TriangleOrbit id="demo" radius={320} tilt={18} sensitivity={0.35} autoDelay={2500} autoSpeed={0.25}
               baseAngles={[0, 120, 240]} minScale={0.5} maxScale={1}>
-              <div className="tri-item" style={{ "--base-angle": "0deg" }}><LaptopMockup /></div>
-              <div className="tri-item" style={{ "--base-angle": "120deg" }}><LaptopMockup /></div>
-              <div className="tri-item" style={{ "--base-angle": "240deg" }}><LaptopMockup /></div>
+              <div className="tri-item" style={{ "--base-angle": "0deg" }}><LaptopMockup imgSrc="/Screen-1.png" /></div>
+              <div className="tri-item" style={{ "--base-angle": "120deg" }}><LaptopMockup imgSrc="/Screen-2.png" /></div>
+              <div className="tri-item" style={{ "--base-angle": "240deg" }}><LaptopMockup imgSrc="/Screen-3.png" /></div>
             </TriangleOrbit>
           </div>
         </div>
