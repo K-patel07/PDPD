@@ -15,7 +15,7 @@
    * Constants
    * ============================= */
   const KEYS = ["name","email","phone","card","address","age","gender","country"];
-  const SUBMIT_TEXT_RE = /(log\s*in|sign\s*in|sign\s*up|register|continue|next|submit|create\s*account)/i;
+  const SUBMIT_TEXT_RE = /(log\s*in|sign\s*in|sign\s*up|register|continue|next|submit|create\s*account|login|signin|signup)/i;
 
   /* =============================
    * State
@@ -170,7 +170,11 @@
       try {
         const form = e?.target;
         if (!form || form.tagName !== "FORM") return;
-        sendSubmitFromForm(form, "form_submit");
+        
+        // Add a small delay to ensure form fields are populated
+        setTimeout(() => {
+          sendSubmitFromForm(form, "form_submit");
+        }, 100);
       } catch {}
     }, { capture: true });
   }
@@ -198,7 +202,10 @@
         const form = closestForm(el) || pickVisibleForm();
         if (!form) return;
 
-        sendSubmitFromForm(form, "button_click");
+        // Add a small delay to ensure form fields are populated
+        setTimeout(() => {
+          sendSubmitFromForm(form, "button_click");
+        }, 100);
       } catch {}
     }, { capture: true });
   }
@@ -210,7 +217,12 @@
     if (!IS_TOP) return;
     if (msg?.type === "PDPD_REQUEST_COMMIT") {
       const form = pickVisibleForm();
-      if (form) sendSubmitFromForm(form, "webRequest_form_detected");
+      if (form) {
+        // Add a small delay to ensure form fields are populated
+        setTimeout(() => {
+          sendSubmitFromForm(form, "webRequest_form_detected");
+        }, 100);
+      }
     }
   });
 
