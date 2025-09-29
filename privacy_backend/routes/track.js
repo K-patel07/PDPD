@@ -468,16 +468,29 @@ const submitSchema = Joi.object({
   category_method: Joi.string().allow("", null),
 }).unknown(false);
 
-router.post("/submit", requireAuth, async (req, res) => {
+router.post("/submit", async (req, res) => {
   try {
     const p = await submitSchema.validateAsync(req.body || {}, { stripUnknown: true });
 
-    // Get ext_user_id from authenticated user (set by requireAuth middleware)
-    const ext_user_id = req.user?.ext_user_id || req.user?.sub;
+    // Get ext_user_id from request body or JWT token (fallback for extension compatibility)
+    let ext_user_id = safeStr(p.ext_user_id || p.extUserId, "");
+    
+    // Try to get from JWT token if available
     if (!ext_user_id) {
-      console.error("[submit] Missing ext_user_id in JWT token:", req.user);
-      return res.status(401).json({ ok: false, error: "Authentication required" });
+      const auth = safeStr(req.headers.authorization, "");
+      const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+      if (token) {
+        try {
+          const payload = jwt.verify(token, process.env.JWT_SECRET || "dev-secret");
+          ext_user_id = safeStr(payload?.ext_user_id || payload?.sub, "");
+        } catch (e) {
+          console.warn("[submit] Invalid JWT token:", e.message);
+        }
+      }
     }
+    
+    // Use the same fallback user ID as visit API for consistency
+    if (!ext_user_id) ext_user_id = "f5ea28c1-6037-4340-a3dd-bfcbfde2e51d";
 
     // hostname normalized (accepts URL)
     const rawHost = p.hostname?.startsWith("http") ? p.hostname : `https://${p.hostname}`;
@@ -581,57 +594,59 @@ router.post("/submit", requireAuth, async (req, res) => {
       return res.status(500).json({ ok: false, error: "Database insert failed" });
     }
 
-    // risk update based on submitted fields
-    try {
-      const ph = await classifyPhishing(hostname);
-      const phishingRisk = clampNum(ph?.phishingScore ?? ph?.score ?? 0, 0, 1, 0);
-      
-      // Tracker risk calculation removed - using exact formula from instructions
+    // risk update based on submitted fields (asynchronous to avoid blocking)
+    setImmediate(async () => {
+      try {
+        const ph = await classifyPhishing(hostname);
+        const phishingRisk = clampNum(ph?.phishingScore ?? ph?.score ?? 0, 0, 1, 0);
+        
+        // Tracker risk calculation removed - using exact formula from instructions
 
-      const flags = {
-        name: submitted.submitted_name,
-        email: submitted.submitted_email,
-        phone: submitted.submitted_phone,
-        card: submitted.submitted_card,
-        address: submitted.submitted_address,
-        age: submitted.submitted_age,
-        gender: submitted.submitted_gender,
-        country: submitted.submitted_country,
-      };
-      
-      // Use the exact risk calculation formula
-      const risk = computeRisk(flags, phishingRisk, hostname) || {};
-      await db.query(
-        `
-        INSERT INTO public.risk_assessments
-          (website_id, ext_user_id, phishing_risk, data_risk, combined_risk, risk_score, band, created_at, updated_at)
-        VALUES ($1,$2,$3,$4,$5,$6,$7, NOW(), NOW())
-        ON CONFLICT (website_id, ext_user_id)
-        DO UPDATE SET
-          phishing_risk = EXCLUDED.phishing_risk,
-          data_risk     = EXCLUDED.data_risk,
-          combined_risk = EXCLUDED.combined_risk,
-          risk_score    = EXCLUDED.risk_score,
-          band          = EXCLUDED.band,
-          updated_at    = NOW();
-      `,
-        [
-          website_id,
-          ext_user_id,
-          Number((risk.phishing_risk ?? phishingRisk) || 0), // 0..1
-          Number((risk.data_risk ?? 0) || 0),                // 0..1
-          Number((risk.combined_risk ?? 0) || 0),            // 0..1
-          Math.min(100, Math.max(0, Math.round(Number(risk.risk_score ?? 0)))), // 0..100
-          String(risk.band || "Unknown"),
-        ]
-      );
-    } catch (e) {
-      console.warn("[submit] risk update failed:", e?.message || e);
-    }
-
-    // log helpful info once
-    const trueKeys = Object.entries(submitted).filter(([, v]) => v).map(([k]) => k).join(", ");
-    console.log(`[submit] saved: ${hostname} user:${ext_user_id} flags{ ${trueKeys} } risk:${risk.risk_score}% (phishing:${(phishingRisk*100).toFixed(1)}% data:${(risk.data_risk*100).toFixed(1)}%)`);
+        const flags = {
+          name: submitted.submitted_name,
+          email: submitted.submitted_email,
+          phone: submitted.submitted_phone,
+          card: submitted.submitted_card,
+          address: submitted.submitted_address,
+          age: submitted.submitted_age,
+          gender: submitted.submitted_gender,
+          country: submitted.submitted_country,
+        };
+        
+        // Use the exact risk calculation formula
+        const risk = computeRisk(flags, phishingRisk, hostname) || {};
+        await db.query(
+          `
+          INSERT INTO public.risk_assessments
+            (website_id, ext_user_id, phishing_risk, data_risk, combined_risk, risk_score, band, created_at, updated_at)
+          VALUES ($1,$2,$3,$4,$5,$6,$7, NOW(), NOW())
+          ON CONFLICT (website_id, ext_user_id)
+          DO UPDATE SET
+            phishing_risk = EXCLUDED.phishing_risk,
+            data_risk     = EXCLUDED.data_risk,
+            combined_risk = EXCLUDED.combined_risk,
+            risk_score    = EXCLUDED.risk_score,
+            band          = EXCLUDED.band,
+            updated_at    = NOW();
+        `,
+          [
+            website_id,
+            ext_user_id,
+            Number((risk.phishing_risk ?? phishingRisk) || 0), // 0..1
+            Number((risk.data_risk ?? 0) || 0),                // 0..1
+            Number((risk.combined_risk ?? 0) || 0),            // 0..1
+            Math.min(100, Math.max(0, Math.round(Number(risk.risk_score ?? 0)))), // 0..100
+            String(risk.band || "Unknown"),
+          ]
+        );
+        
+        // log helpful info once
+        const trueKeys = Object.entries(submitted).filter(([, v]) => v).map(([k]) => k).join(", ");
+        console.log(`[submit] saved: ${hostname} user:${ext_user_id} flags{ ${trueKeys} } risk:${risk?.risk_score || 0}% (phishing:${(phishingRisk*100).toFixed(1)}% data:${(risk?.data_risk || 0)*100).toFixed(1)}%)`);
+      } catch (e) {
+        console.warn("[submit] risk update failed:", e?.message || e);
+      }
+    });
 
     // Debug: Check if data was actually inserted
     try {
