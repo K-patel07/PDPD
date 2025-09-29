@@ -137,12 +137,13 @@ export async function fetchProvidedData({ extUserId, category, limit = 50 } = {}
   return Array.isArray(data?.items) ? data.items : [];
 }
 
-/** Detail for one site’s provided data */
+/** Detail for one site's provided data */
 export async function fetchProvidedDataForSite({ extUserId, hostname } = {}) {
   const data = await safeGet(`${METRICS_BASE}/provided-data/site`, {
     extUserId: extUserId ?? getExtUserId(),
     hostname,
   });
+  console.log("[fetchProvidedDataForSite] API response:", { extUserId: extUserId ?? getExtUserId(), hostname, data });
   return data || {};
 }
 

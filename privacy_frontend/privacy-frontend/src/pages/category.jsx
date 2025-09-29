@@ -163,6 +163,7 @@ export default function Category() {
         if (cancelled) return;
 
         const fu = detail?.fields_union || {};
+        console.log("[Category] Provided data detail:", { detail, fields_union: fu });
         setProvided({
           name: !!fu.name,
           address: !!fu.address,
