@@ -33,7 +33,7 @@ function secondsToPretty(seconds=0){
 function authHeaders(token){ const h={"Content-Type":"application/json"}; if(token) h.Authorization=`Bearer ${token}`; return h; }
 async function fetchJSON(url, token){ const res=await fetch(url,{headers:authHeaders(token)}); if(!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); }
 
-// risk render
+// risk render - barometer style (right to left)
 function applyRisk(score=0){
   const n = Math.max(0, Math.min(100, Number(score)||0));
   let band = "Unknown";
@@ -45,18 +45,17 @@ function applyRisk(score=0){
   if (lblEl) lblEl.textContent = `${band} Risk Level`;
   if (gauge) {
     gauge.setAttribute("data-risk", band.toLowerCase());
-    // Barometer: starts from right (90deg) and fills counterclockwise to left
-    const deg=(n/100)*180;
-    const startAngle = 90; // right position
-    const endAngle = 90 - deg; // rotate counterclockwise
     // Risk color based on band
     let riskColor = '#22c55e'; // green for safe
     if (band==='Critical') riskColor='#dc2626';
     else if (band==='High') riskColor='#ea580c';
     else if (band==='Moderate') riskColor='#f59e0b';
     else if (band==='Low') riskColor='#84cc16';
-    // Fill from right to left (counterclockwise)
-    gauge.style.background=`conic-gradient(from ${endAngle}deg, ${riskColor} 0deg ${deg}deg, #f0f0f0 ${deg}deg 180deg)`;
+    // Barometer: fill from right (0%) to left (100%)
+    // Gray background on left, colored fill from right
+    const fillDeg = (n/100)*180;
+    const grayDeg = 180 - fillDeg;
+    gauge.style.background=`conic-gradient(#f0f0f0 0deg ${grayDeg}deg, ${riskColor} ${grayDeg}deg 180deg)`;
   }
 }
 

@@ -289,8 +289,7 @@ router.get("/track/sites", async (req, res, next) => {
           COALESCE(sv.visit_count, 0) AS vc,
           COALESCE(sv.screen_time_seconds, 0) AS st,
           sv.last_visited,
-          sv.created_at,
-          sv.fields_detected
+          sv.created_at
         FROM site_visits sv
         WHERE sv.ext_user_id = $1
           AND LOWER(
@@ -306,9 +305,7 @@ router.get("/track/sites", async (req, res, next) => {
           MIN(website_id)                                  AS website_id,
           MAX(COALESCE(last_visited, created_at))          AS last_visited,
           SUM(vc)::int                                     AS visits,
-          SUM(st)::int                                     AS screen_time_seconds,
-          -- Get latest fields_detected per host
-          (ARRAY_AGG(fields_detected ORDER BY COALESCE(last_visited, created_at) DESC))[1] AS fields_detected
+          SUM(st)::int                                     AS screen_time_seconds
         FROM v
         GROUP BY host
       ),
@@ -323,13 +320,22 @@ router.get("/track/sites", async (req, res, next) => {
         FROM public.risk_assessments r
         WHERE r.ext_user_id = $1
         ORDER BY r.website_id, r.updated_at DESC
+      ),
+      latest_fields AS (
+        SELECT DISTINCT ON (w.id)
+          w.id AS website_id,
+          fs.fields_detected
+        FROM public.field_submissions fs
+        JOIN public.websites w ON REGEXP_REPLACE(LOWER(COALESCE(w.hostname,'')), '^www\\.', '') = REGEXP_REPLACE(LOWER(COALESCE(fs.hostname,'')), '^www\\.', '')
+        WHERE fs.ext_user_id = $1
+        ORDER BY w.id, fs.created_at DESC
       )
       SELECT 
         agg.host AS hostname,
         to_char(agg.last_visited AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') AS last_visited,
         agg.screen_time_seconds,
         agg.visits,
-        COALESCE(agg.fields_detected, '{}'::jsonb) AS fields_detected,
+        COALESCE(lf.fields_detected, '{}'::jsonb) AS fields_detected,
         COALESCE(lr.data_risk, 0) AS data_risk,
         COALESCE(lr.phishing_risk, 0) AS phishing_risk,
         COALESCE(lr.combined_risk, 0) AS combined_risk,
@@ -337,6 +343,7 @@ router.get("/track/sites", async (req, res, next) => {
         COALESCE(lr.band, 'Safe') AS band
       FROM agg
       LEFT JOIN latest_risk lr ON lr.website_id = agg.website_id
+      LEFT JOIN latest_fields lf ON lf.website_id = agg.website_id
       ORDER BY lr.risk_score DESC NULLS LAST, agg.screen_time_seconds DESC;
     `;
     const { rows } = await db.pool.query(sql, [extUserId, accepted]);
