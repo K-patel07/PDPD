@@ -6,11 +6,11 @@
  */
 function bandFromPercent(pct) {
   pct = Number(pct) || 0;
-  if (pct >= 82) return "Critical";
-  if (pct > 60)  return "High";
-  if (pct > 40)  return "Moderate";
-  if (pct > 20)  return "Low";
-  return "Safe";
+  if (pct >= 86) return "Critical";  // 86-100
+  if (pct >= 61) return "High";      // 61-85
+  if (pct >= 31) return "Moderate";  // 31-60
+  if (pct >= 16) return "Low";       // 16-30
+  return "Safe";                     // 0-15
 }
 
 /**

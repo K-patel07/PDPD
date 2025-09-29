@@ -21,10 +21,11 @@ function clampScore(n) {
 }
 function bandFromScore(score /* 0..100 or null */) {
   if (score == null) return "unknown";
-  if (score <= 24) return "low";
-  if (score <= 49) return "moderate";
-  if (score <= 74) return "high";
-  return "critical";
+  if (score <= 15) return "low";        // 0-15: Safe (light green)
+  if (score <= 30) return "low";        // 16-30: Low (green)
+  if (score <= 60) return "moderate";   // 31-60: Moderate (yellow)
+  if (score <= 85) return "high";       // 61-85: High (orange)
+  return "critical";                    // 86-100: Critical (red)
 }
 // Accept API synonyms but NEVER return "unknown" if score is valid.
 function canonicalBandName(bandProp, score) {

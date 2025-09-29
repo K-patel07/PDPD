@@ -37,7 +37,12 @@ async function fetchJSON(url, token){ const res=await fetch(url,{headers:authHea
 function applyRisk(score=0){
   const n = Math.max(0, Math.min(100, Number(score)||0));
   let band = "Unknown";
-  if (n>=80) band="Critical"; else if (n>=60) band="High"; else if (n>=40) band="Moderate"; else if (n>=20) band="Low"; else if (n>=1) band="Safe";
+  // New thresholds: 0-15 Safe, 16-30 Low, 31-60 Moderate, 61-85 High, 86-100 Critical
+  if (n>=86) band="Critical"; 
+  else if (n>=61) band="High"; 
+  else if (n>=31) band="Moderate"; 
+  else if (n>=16) band="Low"; 
+  else if (n>=0) band="Safe";
   const pctEl=document.getElementById("risk-percent");
   const lblEl=document.getElementById("risk-label");
   const gauge=document.getElementById("risk-gauge");
@@ -46,11 +51,11 @@ function applyRisk(score=0){
   if (gauge) {
     gauge.setAttribute("data-risk", band.toLowerCase());
     // Risk color based on band
-    let riskColor = '#22c55e'; // green for safe
-    if (band==='Critical') riskColor='#dc2626';
-    else if (band==='High') riskColor='#ea580c';
-    else if (band==='Moderate') riskColor='#f59e0b';
-    else if (band==='Low') riskColor='#84cc16';
+    let riskColor = '#84cc16'; // light green for safe (0-15)
+    if (band==='Critical') riskColor='#dc2626';      // red (86-100)
+    else if (band==='High') riskColor='#ea580c';     // orange (61-85)
+    else if (band==='Moderate') riskColor='#f59e0b'; // yellow (31-60)
+    else if (band==='Low') riskColor='#22c55e';      // green (16-30)
     // Barometer: fill from right (0%) to left (100%)
     // Gray background on left, colored fill from right
     const fillDeg = (n/100)*180;

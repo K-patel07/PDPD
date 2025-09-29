@@ -6,10 +6,11 @@ import { normalizeHost } from '../../utils/hostname';
 function bandFromScore(score) {
   const s = Number(score ?? 0);
   if (s < 0) return 'Unknown';
-  if (s <= 30) return 'Low';
-  if (s <= 60) return 'Medium';
-  if (s <= 81) return 'High';
-  if (s <= 100) return 'Critical';
+  if (s <= 15) return 'Safe';       // 0-15: Safe (light green)
+  if (s <= 30) return 'Low';        // 16-30: Low (green)
+  if (s <= 60) return 'Medium';     // 31-60: Moderate (yellow)
+  if (s <= 85) return 'High';       // 61-85: High (orange)
+  if (s <= 100) return 'Critical';  // 86-100: Critical (red)
   return 'Unknown';
 }
 

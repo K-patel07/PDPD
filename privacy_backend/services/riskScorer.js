@@ -39,13 +39,14 @@ function computeFieldRisk(fields = {}) {
 
 /**
  * Banding from percent (0–100)
+ * 0-15: Safe, 16-30: Low, 31-60: Moderate, 61-85: High, 86-100: Critical
  */
 function bandFromPercent(pct) {
-  if (pct >= 82) return "Critical";
-  if (pct > 60) return "High";
-  if (pct > 40) return "Moderate";
-  if (pct > 20) return "Low";
-  return "Safe";
+  if (pct >= 86) return "Critical";  // 86-100
+  if (pct >= 61) return "High";      // 61-85
+  if (pct >= 31) return "Moderate";  // 31-60
+  if (pct >= 16) return "Low";       // 16-30
+  return "Safe";                     // 0-15
 }
 
 /**
