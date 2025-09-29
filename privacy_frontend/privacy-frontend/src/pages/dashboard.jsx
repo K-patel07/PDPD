@@ -84,7 +84,9 @@ export default function Dashboard() {
       setExtUserId(stored.trim());
     } else {
       // Use the actual user ID from the logs
-      setExtUserId("f5ea28c1-6037-4340-a3dd-bfcbfde2e51d");
+      const defaultUserId = "f5ea28c1-6037-4340-a3dd-bfcbfde2e51d";
+      setExtUserId(defaultUserId);
+      localStorage.setItem("ext_user_id", defaultUserId);
     }
   }, []);
 

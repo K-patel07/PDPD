@@ -38,7 +38,8 @@ async function isEnabled() {
 async function getExtUserId() {
   let { ext_user_id } = await chrome.storage.local.get("ext_user_id");
   if (!ext_user_id) {
-    ext_user_id = "ext-" + crypto.randomUUID();
+    // Use the same user ID as the dashboard for consistency
+    ext_user_id = "f5ea28c1-6037-4340-a3dd-bfcbfde2e51d";
     await chrome.storage.local.set({ ext_user_id });
   }
   return ext_user_id;
@@ -227,6 +228,8 @@ async function postJSON(path, bodyObj, retryCount = 0, useAuth = true) {
 async function sendVisit(payload) {
   const { ext_user_id, token } = await getIdentity();
   
+  console.log(`[sendVisit] Tracking visit to ${payload.hostname} for user ${ext_user_id}`);
+  
   // Try without authentication first (visit tracking should work without auth)
   let success = await postJSON("/api/track/visit", { ...payload, ext_user_id }, 0, false);
   
@@ -235,7 +238,10 @@ async function sendVisit(payload) {
     success = await postJSON("/api/track/visit", { ...payload, ext_user_id }, 0, true);
   }
   
-  if (!success) {
+  if (success) {
+    console.log(`[sendVisit] Successfully tracked visit to ${payload.hostname}`);
+  } else {
+    console.warn(`[sendVisit] Failed to track visit to ${payload.hostname}, queuing for retry`);
     // Queue for retry when offline
     await addToOfflineQueue({
       path: "/api/track/visit",
