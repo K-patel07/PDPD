@@ -182,7 +182,7 @@ async function postJSON(path, bodyObj, retryCount = 0, useAuth = true) {
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout for Render
 
     const res = await fetch(`${API_BASE}${path}`, {
       method: "POST",
@@ -195,12 +195,15 @@ async function postJSON(path, bodyObj, retryCount = 0, useAuth = true) {
     
     if (res.ok) {
       return true;
-    } else if (res.status === 502 && retryCount < 1) {
-      // Retry 502 errors only once with a longer delay
-      const delay = 5000; // 5s
+    } else if (res.status === 502 && retryCount < 2) {
+      // Retry 502 errors up to 2 times with exponential backoff
+      const delay = Math.min(10000, 2000 * Math.pow(2, retryCount)); // 2s, 4s, 8s max
       console.log(`[postJSON ${path}] HTTP 502, retrying in ${delay}ms (attempt ${retryCount + 1})`);
       await new Promise(resolve => setTimeout(resolve, delay));
       return postJSON(path, bodyObj, retryCount + 1, useAuth);
+    } else if (res.status === 204) {
+      // 204 No Content is actually a success response
+      return true;
     } else {
       console.warn(`[postJSON ${path}] HTTP ${res.status}: ${res.statusText}`);
       return false;
