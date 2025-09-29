@@ -9,8 +9,9 @@
   --frame-border: 2px;
   --frame-grad-angle: var(--grad-angle, 320deg);
   --frame-grad-a: var(rgba(39, 40, 103, 0.8));  
-  --frame-grad-b: var( rgba(54, 172, 201, 0.8));            /* white interior in both themes */
-  --cat-icon-color: #000000;   /* black for light mode */
+  --frame-grad-b: var( rgba(54, 172, 201, 0.8));
+  --frame-fill: #fffefe;            /* white interior in both themes */
+
 }
 
 
@@ -60,9 +61,9 @@
 
 .cat-layout {
   display: grid;
-  grid-template-columns: minmax(280px, 320px) minmax(400px, 1fr) minmax(280px, 320px);
-  grid-template-rows: 340px 360px;
-  gap: 16px;
+  grid-template-columns: 320px 1fr 360px;
+  grid-template-rows: auto auto auto;
+  gap: 24px;
   align-items: start;
   margin-top: 8px;
   max-width: 100%;
@@ -106,6 +107,15 @@
   border: 1px solid var(--stroke);
   border-radius: 50%;
   flex-shrink: 0;
+}
+
+/* Website favicon styling */
+.site-favicon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  object-fit: contain;
 }
 .li-bar {
   width: 65%; height: 14px;
@@ -256,7 +266,7 @@
   grid-row: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 24px;
   min-width: 0;
 }
 .mini-card { 
@@ -724,24 +734,24 @@ main {
 .cat-layout{
   display: grid;
   grid-template-columns: 320px 1fr 360px; /* adjust to your widths */
-  gap: 20px;                               /* ← space between the big columns/cards */
+  gap: 24px;                               /* ← space between the big columns/cards */
 }
 
 /* the two small top cards in the center column */
 .cat-layout .center-top{
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;                                /* ← space between the two mini cards */
+  gap: 24px;                                /* ← space between the two mini cards */
 }
 
 /* provided data card needs a little top gap from the minis */
 .cat-layout .provided-slot{
-  margin-top: 16px;
+  margin-top: 24px;
 }
 
 /* keep right column cards separated */
 .cat-layout .risk-card{ margin-top: 0; }
-.cat-layout .unsub-card{ margin-top: 16px; }
+.cat-layout .unsub-card{ margin-top: 24px; }
 
 /* the list area (A, B, C … groups) */
 .left-list .group{
@@ -764,8 +774,8 @@ main {
 /* ===== Category page layout spacing ===== */
 :root{
   /* change these numbers to adjust spacing */
-  --cat-grid-gap: 90px;   /* space between the 3 big columns/cards */
-  --cat-mini-gap: 20px;   /* space between the two small top cards */
+  --cat-grid-gap: 24px;   /* space between the 3 big columns/cards */
+  --cat-mini-gap: 24px;   /* space between the two small top cards */
 }
 
 /* main grid: left list | center column | right column */
@@ -773,7 +783,7 @@ main {
 .cat-layout{
   display: grid;
   grid-template-columns: 320px 1fr 360px;
-  gap: var(--cat-grid-gap, 20px);
+  gap: var(--cat-grid-gap, 24px);
   grid-auto-flow: row dense;
 }
 
@@ -783,7 +793,7 @@ main {
   grid-row: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--cat-mini-gap, 16px);
+  gap: var(--cat-mini-gap, 24px);
 }
 
 /* Risk card stays in the right column, first row */
@@ -793,21 +803,21 @@ main {
 }
 
 /* src/styles/Category.css */
-.cat-layout .risk-card.frame-gradient{ margin-top:40px; }  /* 12–24px as you like */
+.cat-layout .risk-card.frame-gradient{ margin-top:24px; }  /* 12–24px as you like */
 
 
-/* Provided Data spans center + right on row 2 (this removes the “box” beside it) */
+/* Provided Data spans center + right on row 2 (this removes the "box" beside it) */
 .cat-layout .provided-slot{
   grid-column: 2 / 4;   /* ← key line */
   grid-row: 2;
-  margin-top: var(--cat-mini-gap, 16px);
+  margin-top: var(--cat-mini-gap, 24px);
 }
 
 /* Unsubscribe goes below, right column */
 .cat-layout .unsub-card{
   grid-column: 2 / 4;
   grid-row: 3;
-  margin-top: var(--cat-mini-gap, 5px);
+  margin-top: var(--cat-mini-gap, 24px);
 }
 
 /* keep the frame above neighbors just in case */
@@ -1155,3 +1165,4 @@ html.theme-dark .left-list .search input::placeholder,
 html.dark       .left-list .search input::placeholder{
   color: rgba(230,233,239,.75) !important;
 }
+

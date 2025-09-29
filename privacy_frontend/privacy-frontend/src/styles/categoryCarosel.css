@@ -16,7 +16,7 @@
   --icon-tile-radius: 14px;        /* corners of the icon tile */
   --icon-size: 30px;               /* actual icon size inside the tile */
 
-  --icon-tile-bg: rgba(255,255,255,.65);
+  --icon-tile-bg: rgba(255, 255, 255, 0.155);
   --icon-tile-border: rgba(2,6,23,.08);
 
   --category-font-size: 1.2rem;    /* label text size */
@@ -70,7 +70,7 @@
   align-items: center;
   justify-content: center; /* keeps icon centered inside the tile */
   box-sizing: border-box;
-  color: black;
+  color: var(--cat-icon-color);
 
   background: var(--icon-tile-bg);
   border: 1px solid var(--icon-tile-border);
@@ -266,8 +266,7 @@
 .category-scroll .category-pill,
 .category-scroll .chip {
   background: linear-gradient(135deg, rgba(73, 74, 148, 0.9), rgba(56,150,174,0.9)) !important;
-  border-color: var(--stroke);
-  color: var(--cat-icon-color, var(--text)) !important; /* text color */
+  border-color: var(--stroke);  color: var(--cat-icon-color) !important;
 }
 
 /* Keep your normal look; switch to gradient on hover/focus */
@@ -281,7 +280,7 @@
 .category-scroll .chip:focus-visible {
   background: linear-gradient(135deg, rgba(73, 74, 148, 0.9), rgba(56,150,174,0.9)) !important;
   border-color: var(--accent);
-  color: var(--cat-icon-color, var(--text)) !important;
+  color: var(--cat-icon-color) !important;
 }
 
 /* Icon tile styling */
@@ -294,15 +293,15 @@
 }
 
 /* If your icons are SVGs that use currentColor, use theme color */
-.category-scroll .category .category-icon { color: var(--cat-icon-color, var(--text)) !important; }
+.category-scroll .category .category-icon { color: var(--cat-icon-color) !important; }
 .category-scroll .category .category-icon svg { stroke: currentColor; fill: none; }
 
 /* PNG icon styling for theme colors */
 .theme-light .category-scroll .category .category-icon img {
-  filter: brightness(0); /* black icons in light mode */
+  filter: brightness(0) invert(1); /* white icons in light mode */
 }
 .theme-dark .category-scroll .category .category-icon img {
-  filter: brightness(0) invert(1); /* white icons in dark mode */
+  filter: brightness(0); /* black icons in dark mode */
 }
 
 .category-scroll .category,
@@ -366,10 +365,10 @@ header#top {
 
 /* unify icon + label color on the chip */
 .category-scroll .category { 
-  color: var(--cat-icon-color, var(--text)) !important;                    /* label color */
+  color: var(--cat-icon-color) !important;                    /* label color */
 }
 .category-scroll .category .category-icon {
-  color: var(--cat-icon-color, var(--text)) !important;         /* icon color (for SVGs that use currentColor) */
+  color: var(--cat-icon-color) !important;         /* icon color (for SVGs that use currentColor) */
 }
 
 /* make all shapes inside the SVG take the chip color */
@@ -381,13 +380,7 @@ header#top {
 
 /* ==== CATEGORY ICON COLOR – HARD OVERRIDE (SVG + PNG) ==== */
 
-/* 1) Choose the color once per theme */
-:root{
-  --cat-icon-color: #000000;   /* light mode icon/label color */
-}
-.dark, .theme-dark{
-  --cat-icon-color: #ffffff;   /* dark mode icon/label color (change if you want) */
-}
+/* 1) Color variables are now defined in theme.light.css and theme.dark.css */
 
 /* 2) Make each chip (and its label) use that color */
 .category-scroll .category{
@@ -412,13 +405,13 @@ header#top {
 /* 5) If your icons are PNGs/IMGs, tint them to the same color */
 .theme-light .category-scroll .category .category-icon img,
 .theme-light .category-scroll .category > :first-child img{
-  /* Black icons in light mode */
-  filter: brightness(0) !important;
+  /* White icons in light mode */
+  filter: brightness(0) invert(1) !important;
 }
 .theme-dark .category-scroll .category .category-icon img,
 .theme-dark .category-scroll .category > :first-child img{
-  /* White icons in dark mode */
-  filter: brightness(0) invert(1) !important;
+  /* Black icons in dark mode */
+  filter: brightness(0) !important;
 }
 
 :root{

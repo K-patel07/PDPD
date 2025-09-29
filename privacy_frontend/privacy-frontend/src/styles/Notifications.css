@@ -1,0 +1,236 @@
+/* =========================
+   NOTIFICATIONS SECTION
+========================= */
+
+/* Global app dark mode styling */
+.dark body {
+  background: #040712 !important;
+  color: #e6f0ff;
+}
+
+.dark #app {
+  background: #040712;
+}
+
+.dark #main {
+  background: #040712;
+}
+
+.dark #top {
+  background: #070b10;
+  border-color: #0f141a;
+}
+
+/* Light mode navbar colors */
+.breadcrumbs {
+  color: #1a1a1a;
+}
+
+.breadcrumbs span {
+  color: #374151;
+}
+
+.breadcrumbs strong {
+  color: #000000;
+}
+
+/* Dark mode navbar colors */
+.dark .breadcrumbs {
+  color: #e7eef7;
+}
+
+.dark .breadcrumbs span {
+  color: #a8b3c7;
+}
+
+.dark .breadcrumbs strong {
+  color: #ffffff;
+}
+
+.notifications-notif {
+  background: #ffffff; /* Light mode: white background */
+  color: #1a1a1a; /* Light mode: dark text */
+  padding: 3rem 1rem;
+  margin: 2rem 0 0;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Dark mode styles */
+.dark .notifications-notif {
+  background: transparent; /* Use the main background */
+  color: #e6f0ff; /* Dark mode: light text */
+}
+
+.notif-wrap {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.notif-eyebrow {
+  display: inline-block;
+  margin-bottom: .6rem;
+  letter-spacing: .22em;
+  font-weight: 700;
+  color: #6b7280; /* Light mode: medium gray */
+  opacity: .9;
+  font-size: .85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: .6rem;
+}
+
+.dark .notif-eyebrow {
+  color: rgba(153, 240, 246, 0.9); /* Dark mode: light blue */
+}
+
+.notif-eyebrow::before,
+.notif-eyebrow::after {
+  content: "";
+  height: 1px;
+  width: 90px;
+  background: currentColor;
+  opacity: .6;
+}
+
+.notif-title {
+  font-size: clamp(2rem, 3.5vw + .3rem, 3.2rem);
+  line-height: 1.1;
+  font-weight: 800;
+  margin: 0 0 .4rem;
+}
+
+.notif-white {
+  color: #1a1a1a; /* Light mode: dark text */
+}
+
+.dark .notif-white {
+  color: #fff; /* Dark mode: light text */
+}
+
+.notif-grad {
+  background: linear-gradient(90deg, rgba(130, 131, 225, 0.9), rgba(81, 220, 255, 0.9));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.notif-grid {
+  margin-top: 2rem;
+}
+
+/* NOTIFICATION LIST */
+.notif-list {
+  display: grid;
+  gap: 20px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.notif-list li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1.2rem;
+  align-items: start;
+  background: linear-gradient(135deg, rgba(45, 226, 193, .05) 0%, rgba(90, 167, 255, .05) 100%);
+  border: 1px solid rgba(45, 226, 193, 0.3);
+  color: #374151;
+  border-radius: 12px;
+  padding: 1.2rem 1.4rem;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+}
+
+.dark .notif-list li {
+  background: linear-gradient(135deg, rgba(45, 226, 193, .10) 0%, rgba(90, 167, 255, .10) 100%);
+  border: 1px solid rgba(153, 240, 246, 0.9);
+  color: rgba(153, 240, 246, 0.9);
+}
+
+.notif-list li:hover {
+  transform: translateY(-2px);
+  transition: transform .2s ease, box-shadow .2s ease;
+  box-shadow: 0 12px 28px -12px rgba(95, 216, 255, .25);
+  border-color: rgba(122, 160, 255, 0.28);
+}
+
+.notif-list strong {
+  display: block;
+  margin-bottom: .4rem;
+  color: #374151; /* Light mode: dark gray */
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.dark .notif-list strong {
+  color: rgba(153, 240, 246); /* Dark mode: light blue */
+}
+
+.notif-list p {
+  margin: 0;
+  color: #6b7280; /* Light mode: medium gray */
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.dark .notif-list p {
+  color: whitesmoke; /* Dark mode: light text */
+}
+
+/* SVG ICONS */
+.notif-svg {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  color: #6ee0ff;
+  filter: drop-shadow(0 6px 16px rgba(110, 224, 255, .25));
+  transition: all 0.2s ease;
+}
+
+.notif-list li:hover .notif-svg {
+  color: #9ae6ff;
+  filter: drop-shadow(0 8px 20px rgba(154, 230, 255, .35));
+  transform: scale(1.05);
+}
+
+/* Individual icon colors */
+.notif-svg-preferences {
+  color: #8b5cf6; /* Purple */
+}
+
+.notif-svg-channels {
+  color: #06b6d4; /* Cyan */
+}
+
+.notif-svg-dnd {
+  color: #f59e0b; /* Orange */
+}
+
+.notif-svg-security {
+  color: #ef4444; /* Red */
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .notifications-notif {
+    padding: 2rem 1rem;
+  }
+  
+  .notif-list li {
+    padding: 1rem;
+    gap: 1rem;
+  }
+  
+  .notif-list strong {
+    font-size: 16px;
+  }
+  
+  .notif-list p {
+    font-size: 13px;
+  }
+  
+  .notif-eyebrow::before,
+  .notif-eyebrow::after {
+    width: 60px;
+  }
+}

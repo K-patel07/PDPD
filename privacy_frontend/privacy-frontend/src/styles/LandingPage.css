@@ -607,7 +607,7 @@ body {
   color: transparent;
 }
 
-/* 3 + 2 layout via grid-areas */
+/* 3 + 3 layout via grid-areas */
 .kf-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(320px, 1fr));
@@ -615,7 +615,7 @@ body {
   max-width: var(--container-max);
   margin: 0 auto;
   padding-inline: var(--section-x);
-  grid-template-areas: "a b c" ". d e";
+  grid-template-areas: "a b c" "d e f";
 }
 
 .kf-grid .kf-card:nth-of-type(1) {
@@ -636,6 +636,10 @@ body {
 
 .kf-grid .kf-card:nth-of-type(5) {
   grid-area: e;
+}
+
+.kf-grid .kf-card:nth-of-type(6) {
+  grid-area: f;
 }
 
 .kf-card {

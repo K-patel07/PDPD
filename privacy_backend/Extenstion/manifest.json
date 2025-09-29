@@ -23,9 +23,21 @@
     "https://privacypulse-9xnj.onrender.com/*"        
   ],
 
-  "action": {
+    "action": {
     "default_title": "PDPD",
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "logo.png",
+      "32": "logo.png",
+      "48": "logo.png",
+      "128": "logo.png"
+    }
+  },
+  "icons": {
+    "16": "logo.png",
+    "32": "logo.png",
+    "48": "logo.png",
+    "128": "logo.png"
   },
 
   "options_page": "options.html",

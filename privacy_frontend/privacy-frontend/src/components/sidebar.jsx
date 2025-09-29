@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useTheme } from "../contexts/ThemeContext";
 
 /* Icons */
@@ -31,7 +31,15 @@ import logoutLight from "../assets/sidebar-icons/light - logout.svg";
  */
 export default function Sidebar() {
   const { darkMode } = useTheme();
+  const location = useLocation();
   const pick = (normal, light) => (darkMode ? light : normal);
+  
+  // Check if current path matches the nav item
+  const isActive = (path) => {
+    if (path === "/" && location.pathname === "/") return true;
+    if (path !== "/" && location.pathname.startsWith(path)) return true;
+    return false;
+  };
 
   const Icon = ({ src, label }) => (
     <span className="icon-container" aria-hidden="true">
@@ -71,42 +79,42 @@ export default function Sidebar() {
       <nav role="navigation" aria-label="Main">
         <ul>
           <li>
-            <Link to="/" className="nav-row" aria-label="Home">
+            <Link to="/" className={`nav-row ${isActive("/") ? "active" : ""}`} aria-label="Home">
               <Icon src={pick(home, homeLight)} />
               <span className="label">Home</span>
             </Link>
           </li>
 
           <li>
-            <Link to="/dashboard" className="nav-row" aria-label="Dashboard">
+            <Link to="/dashboard" className={`nav-row ${isActive("/dashboard") ? "active" : ""}`} aria-label="Dashboard">
               <Icon src={pick(dashboard, dashboardLight)} />
               <span className="label">Dashboard</span>
             </Link>
           </li>
 
           <li>
-            <Link to="/settings" className="nav-row" aria-label="Settings">
+            <Link to="/settings" className={`nav-row ${isActive("/settings") ? "active" : ""}`} aria-label="Settings">
               <Icon src={pick(settings, settingsLight)} />
               <span className="label">Settings</span>
             </Link>
           </li>
 
           <li>
-            <Link to="/notifications" className="nav-row" aria-label="Notifications">
+            <Link to="/notifications" className={`nav-row ${isActive("/notifications") ? "active" : ""}`} aria-label="Notifications">
               <Icon src={pick(notifications, notificationsLight)} />
               <span className="label">Notifications</span>
             </Link>
           </li>
 
           <li>
-            <Link to="/extensions" className="nav-row" aria-label="Extensions">
+            <Link to="/extensions" className={`nav-row ${isActive("/extensions") ? "active" : ""}`} aria-label="Extensions">
               <Icon src={pick(extension, extensionLight)} />
               <span className="label">Get Extension</span>
             </Link>
           </li>
 
           <li>
-            <Link to="/subs" className="nav-row" aria-label="Subscription">
+            <Link to="/subs" className={`nav-row ${isActive("/subs") ? "active" : ""}`} aria-label="Subscription">
               <Icon src={pick(subscription, subscriptionLight)} />
               <span className="label">Subscription</span>
             </Link>

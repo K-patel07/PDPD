@@ -4,6 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>PrivacyPulse</title>
+  <link rel="icon" type="image/png" href="logo.png" />
+  <link rel="shortcut icon" type="image/png" href="logo.png" />
   <style>
     :root{--bg:#f6f8fb;--card:#fff;--muted:#6b7280;--ink:#0f172a;--ring:#e5e7eb}
     *{box-sizing:border-box}
@@ -55,7 +57,6 @@
       <div>Status: <span id="status-text" class="off">OFF</span></div>
       <button id="toggle-btn">Turn ON</button>
     </div>
-    <div class="hint">Stays this way until you change it.</div>
 
     <!-- hostname -->
     <h1 id="host-label" class="title" style="margin-top:14px;">Loading…</h1>
@@ -89,13 +90,6 @@
         <div class="pill" data-field="country">Country</div>
         <div class="pill" data-field="other">Age</div>
       </div>
-    </div>
-
-    <!-- authentication status -->
-    <div id="auth-status" class="card" style="margin-top:8px; display:none;">
-      <div class="sub">🔐 Authentication</div>
-      <div id="auth-message" class="small muted">Please log in to enable form tracking</div>
-      <button id="open-options" class="btn btn-secondary" style="margin-top:8px; width:100%;">Open Settings</button>
     </div>
 
     <!-- footer -->

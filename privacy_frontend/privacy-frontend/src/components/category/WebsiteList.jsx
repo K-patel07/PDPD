@@ -268,7 +268,16 @@ export default function WebsiteList({
                     onClick={() => handleClick(s)}
                     title={`${s.displayName} • Total: ${formatDuration(Number(s.screen_time_seconds || 0))}${last ? ` • Last: ${last.toLocaleDateString()}` : ""}`}
                   >
-                    <span className="site-dot" aria-hidden="true" />
+                    <img 
+                      src={`https://www.google.com/s2/favicons?domain=${s.host || s.displayName}&sz=32`}
+                      alt={`${s.displayName} favicon`}
+                      className="site-favicon"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'inline-block';
+                      }}
+                    />
+                    <span className="site-dot" aria-hidden="true" style={{display: 'none'}} />
                     <span className="site-name pretty-name">{s.displayName}</span>
                   </button>
                 );

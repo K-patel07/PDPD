@@ -1,0 +1,253 @@
+/* Help Icon Button */
+.help-icon-btn {
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid var(--stroke, #e2e8f0);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  margin-left: 8px;
+}
+
+.help-icon-btn:hover {
+  background: var(--panel, #f8fafc);
+  border-color: var(--muted, #64748b);
+  transform: scale(1.05);
+}
+
+.help-icon-btn img {
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+.help-icon-btn:hover img {
+  opacity: 1;
+}
+
+/* Modal Overlay */
+.help-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* Modal */
+.help-modal {
+  background: white;
+  border-radius: 12px;
+  max-width: 800px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  position: relative;
+  margin: auto;
+  transform: none;
+}
+
+/* Modal Header */
+.help-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.help-modal-header h2 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #64748b;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+/* Modal Content */
+.help-modal-content {
+  padding: 24px;
+  line-height: 1.6;
+  color: #334155;
+}
+
+.help-modal-content p {
+  margin-bottom: 16px;
+  font-size: 1rem;
+}
+
+.help-section {
+  margin-bottom: 32px;
+}
+
+.help-section h3 {
+  color: #1e293b;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+
+.help-section h4 {
+  color: #1e293b;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  margin-top: 20px;
+}
+
+.help-section ul {
+  margin-bottom: 16px;
+  padding-left: 20px;
+}
+
+.help-section ol {
+  margin-bottom: 16px;
+  padding-left: 20px;
+}
+
+.help-section li {
+  margin-bottom: 8px;
+}
+
+.faq-item {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 4px solid #3b82f6;
+}
+
+.faq-item h4 {
+  margin-top: 0;
+  color: #1e293b;
+}
+
+.faq-item p {
+  margin-bottom: 0;
+  color: #475569;
+}
+
+/* Dark mode support */
+html.theme-dark .help-modal,
+html.dark .help-modal {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+html.theme-dark .help-modal-header,
+html.dark .help-modal-header {
+  border-bottom-color: #334155;
+}
+
+html.theme-dark .help-modal-header h2,
+html.dark .help-modal-header h2 {
+  color: #f1f5f9;
+}
+
+html.theme-dark .help-modal-content,
+html.dark .help-modal-content {
+  color: #cbd5e1;
+}
+
+html.theme-dark .help-section h3,
+html.dark .help-section h3 {
+  color: #f1f5f9;
+  border-bottom-color: #334155;
+}
+
+html.theme-dark .help-section h4,
+html.dark .help-section h4 {
+  color: #f1f5f9;
+}
+
+html.theme-dark .faq-item,
+html.dark .faq-item {
+  background: #334155;
+  border-left-color: #60a5fa;
+}
+
+html.theme-dark .faq-item h4,
+html.dark .faq-item h4 {
+  color: #f1f5f9;
+}
+
+html.theme-dark .faq-item p,
+html.dark .faq-item p {
+  color: #cbd5e1;
+}
+
+html.theme-dark .close-btn,
+html.dark .close-btn {
+  color: #94a3b8;
+}
+
+html.theme-dark .close-btn:hover,
+html.dark .close-btn:hover {
+  background: #334155;
+  color: #f1f5f9;
+}
+
+html.theme-dark .help-icon-btn,
+html.dark .help-icon-btn {
+  border-color: #475569;
+}
+
+html.theme-dark .help-icon-btn:hover,
+html.dark .help-icon-btn:hover {
+  background: #334155;
+  border-color: #64748b;
+}
+
+/* Ensure modal is properly centered and visible */
+.help-modal-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 99999 !important;
+}
+
+.help-modal {
+  position: relative !important;
+  margin: 0 !important;
+  transform: none !important;
+  top: auto !important;
+  left: auto !important;
+}

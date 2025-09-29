@@ -1,0 +1,130 @@
+/* Empty State Component Styles */
+.empty-state-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  width: 100%;
+  padding: 40px 20px;
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+}
+
+.empty-state-content {
+  text-align: center;
+  max-width: 500px;
+  width: 100%;
+}
+
+.empty-state-image {
+  margin-bottom: 32px;
+}
+
+.empty-illustration {
+  width: 300px;
+  height: 300px;
+  object-fit: contain;
+  opacity: 0.8;
+}
+
+.empty-state-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text, #1f2937);
+  margin: 0 0 12px 0;
+  line-height: 1.3;
+}
+
+.empty-state-subtitle {
+  font-size: 20px;
+  color: var(--text-secondary, #6b7280);
+  margin: 0 0 32px 0;
+  line-height: 1.5;
+}
+
+.empty-state-actions {
+  margin-bottom: 24px;
+}
+
+.empty-state-button {
+  display: inline-block;
+  padding: 12px 24px;
+  background: var(--accent, #8283e1);
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.empty-state-button:hover {
+  background: var(--accent-hover, #6b6bc7);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(130, 131, 225, 0.3);
+}
+
+.empty-state-footer {
+  margin-top: 16px;
+}
+
+.empty-state-link {
+  color: var(--text-secondary, #6b7280);
+  text-decoration: underline;
+  font-size: 18px;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.empty-state-link:hover {
+  color: var(--accent, #8283e1);
+}
+
+/* Dark mode styles */
+html.theme-dark .empty-state-title,
+html.dark .empty-state-title {
+  color: var(--text, #f9fafb);
+}
+
+html.theme-dark .empty-state-subtitle,
+html.dark .empty-state-subtitle {
+  color: var(--text-secondary, #9ca3af);
+}
+
+html.theme-dark .empty-state-link,
+html.dark .empty-state-link {
+  color: var(--text-secondary, #9ca3af);
+}
+
+html.theme-dark .empty-state-link:hover,
+html.dark .empty-state-link:hover {
+  color: var(--accent, #8283e1);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .empty-state-container {
+    min-height: 300px;
+    padding: 20px 16px;
+  }
+  
+  .empty-illustration {
+    width: 250px;
+    height: 250px;
+  }
+  
+  .empty-state-title {
+    font-size: 20px;
+  }
+  
+  .empty-state-subtitle {
+    font-size: 18px;
+  }
+  
+  .empty-state-button {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+}

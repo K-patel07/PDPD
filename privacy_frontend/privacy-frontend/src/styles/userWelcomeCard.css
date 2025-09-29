@@ -22,9 +22,9 @@
 
 /* remove the overhang-based auto spacer (since there's no art now) */
 .greet-card, .welcome-card, .user-welcome-card{
-  margin-top: 40px !important;
-  margin-bottom: 40px !important; /* Space between welcome card and charts */
-  margin-left: 40px !important; /* Left spacing for welcome card */
+  margin-top: 25px !important;
+  margin-bottom: 25px !important; /* Space between welcome card and charts */
+  margin-left: 47px !important; /* Left spacing for welcome card */
 }
 
 /* Ensure our card’s own gradient shows (no dimming mask) */
@@ -36,14 +36,14 @@
 
 /* Light theme gradient */
 .greet-card{
-  background: linear-gradient(70deg, rgba(73, 74, 148, 0.467), rgba(56,150,174,0.9)) !important;
-  color: black /* optional: ensures good contrast */
+  background: linear-gradient(135deg, rgba(73, 74, 148, 0.7), rgba(56,150,174,0.9)) !important;
+  color: white /* optional: ensures good contrast */
 }
 
 /* Dark theme gradient */
 .dark .greet-card, .theme-dark .greet-card{
-  background: linear-gradient(70deg, rgba(73, 74, 148, 0.467), rgba(56,150,174,0.9)) !important;
-  color: #fff; /* optional */
+  background: linear-gradient(90deg, rgba(130, 131, 225, 0.9), rgba(81, 220, 255, 0.9));
+  color: black; /* optional */
 }
 
 :root{ --gap-welcome-to-next: 24px; } /* or whatever you like */
@@ -53,7 +53,7 @@
   font-size: 1.1rem; 
   font-weight: 600; 
   letter-spacing: .2px; 
-  color: black; 
+  color: white; 
 } 
 
 .dark .greet-card p, .welcome-card p, .user-welcome-card p{ 
@@ -61,7 +61,7 @@
   font-size: 1.1rem; 
   font-weight: 600; 
   letter-spacing: .2px; 
-  color: rgb(255, 255, 255); 
+  color: black; 
 }
 
 

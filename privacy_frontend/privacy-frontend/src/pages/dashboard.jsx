@@ -12,8 +12,9 @@ import CategoryVisitPieCard from "../components/CategoryVisitPieCard";
 import TrendLineCard from "../components/TrendLineCard";
 import ThemeToggle from "../components/ThemeToggle";
 import CategoryScroll from "../components/categoryscroll";
-import UserManual from "../components/UserManual";
 import ExtensionDownloadPrompt from "../components/ExtensionDownloadPrompt";
+import HelpModal from "../components/HelpModal";
+import GlobalSearch from "../components/GlobalSearch";
 
 import { CANONICAL_CATEGORIES } from "../utils/categories.js";
 import { CATEGORY_COLORS } from "../utils/categoryColors.js";
@@ -147,12 +148,8 @@ export default function Dashboard() {
           </div>
 
           <div className="top-actions">
-            <label className="search">
-              <input type="text" placeholder="Search here" />
-              <button className="icon-btn" aria-label="Search" />
-            </label>
-
-            <UserManual />
+            <GlobalSearch />
+            <HelpModal />
             <ThemeToggle className="toggle" />
           </div>
         </header>
