@@ -21,13 +21,18 @@ export default function TopSitesRiskCard({ extUserId, limit = 5, endpoint = "/ap
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [note, setNote] = useState("");
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   useEffect(() => {
     let ignore = false;
     
-    async function fetchData() {
-      setLoading(true);
+    async function fetchData(showLoading = false) {
+      // Only show loading spinner on initial load, not on auto-refresh
+      if (showLoading && !ignore) {
+        setLoading(true);
+      }
       setNote("");
+      
       try {
         const url = `${endpoint}?extUserId=${encodeURIComponent(extUserId)}&limit=${encodeURIComponent(limit)}`;
         const res = await http.get(endpoint, {
@@ -55,22 +60,25 @@ export default function TopSitesRiskCard({ extUserId, limit = 5, endpoint = "/ap
           setRows([]);
         }
       } finally {
-        if (!ignore) setLoading(false);
+        if (!ignore && showLoading) {
+          setLoading(false);
+          setIsInitialLoad(false);
+        }
       }
     }
     
-    // Initial load
-    fetchData();
+    // Initial load with loading spinner
+    fetchData(true);
     
-    // Auto-refresh every 15 seconds
+    // Auto-refresh every 15 seconds (silent, no loading state)
     const pollInterval = setInterval(() => {
-      if (!ignore) fetchData();
+      if (!ignore && !isInitialLoad) fetchData(false);
     }, 15000);
     
-    // Refresh when page becomes visible
+    // Refresh when page becomes visible (silent)
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && !ignore) {
-        fetchData();
+      if (document.visibilityState === 'visible' && !ignore && !isInitialLoad) {
+        fetchData(false);
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);

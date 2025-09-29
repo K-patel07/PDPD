@@ -107,6 +107,7 @@ export default function CategoryVisitPieCard({
   const [loading, setLoading] = useState(true);
   const [note, setNote] = useState("");
   const [err, setErr] = useState("");
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Stable color map (uses your provided colors first, then palette)
   const COLOR_OF = useMemo(() => buildColorMap({ preferredOrder: ORDER, provided: categoryColors }), [ORDER, categoryColors]);
@@ -115,14 +116,19 @@ export default function CategoryVisitPieCard({
   useEffect(() => {
     let cancelled = false;
 
-    async function fetchData() {
+    async function fetchData(showLoading = false) {
       if (!extUserId) {
         setRows(ORDER.map(c => ({ category: c, risk_pct: 0 })));
         setLoading(false);
         setNote("Sign in to see category risk.");
         return;
       }
-      setLoading(true); setErr(""); setNote("");
+      
+      // Only show loading on initial load
+      if (showLoading && !cancelled) {
+        setLoading(true);
+      }
+      setErr(""); setNote("");
 
       try {
         const items = await fetchCategoryRisk({ extUserId }); // raw array
@@ -149,22 +155,25 @@ export default function CategoryVisitPieCard({
           setNote("Showing example data");
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && showLoading) {
+          setLoading(false);
+          setIsInitialLoad(false);
+        }
       }
     }
 
-    // Initial load
-    fetchData();
+    // Initial load with loading spinner
+    fetchData(true);
 
-    // Auto-refresh every 15 seconds
+    // Auto-refresh every 15 seconds (silent)
     const pollInterval = setInterval(() => {
-      if (!cancelled) fetchData();
+      if (!cancelled && !isInitialLoad) fetchData(false);
     }, 15000);
 
-    // Refresh when page becomes visible
+    // Refresh when page becomes visible (silent)
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && !cancelled) {
-        fetchData();
+      if (document.visibilityState === 'visible' && !cancelled && !isInitialLoad) {
+        fetchData(false);
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);

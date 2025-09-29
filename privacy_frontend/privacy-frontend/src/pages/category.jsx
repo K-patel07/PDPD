@@ -81,10 +81,12 @@ export default function Category() {
   }, [darkMode]);
 
   // fetch sites for category (NEW: uses combined endpoint with risk + fields)
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
+    async function load(silent = false) {
       if (!extUserId || !categoryName) {
         setSites([]);
         return;
@@ -107,6 +109,10 @@ export default function Category() {
         if (!selectedSite && sorted.length) {
           setSelectedSite(sorted[0]); // pick first by default
         }
+        
+        if (!silent) {
+          setIsInitialLoad(false);
+        }
       } catch (e) {
         console.error("[Category] fetchCategoryInsights failed:", e);
         if (!cancelled) setSites([]);
@@ -114,17 +120,17 @@ export default function Category() {
     }
 
     // Initial load
-    load();
+    load(false);
     
-    // Auto-refresh every 20 seconds
+    // Auto-refresh every 20 seconds (silent - no visible changes to UI)
     const pollInterval = setInterval(() => {
-      if (!cancelled) load();
+      if (!cancelled && !isInitialLoad) load(true);
     }, 20000);
     
-    // Refresh when page becomes visible
+    // Refresh when page becomes visible (silent)
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && !cancelled) {
-        load();
+      if (document.visibilityState === 'visible' && !cancelled && !isInitialLoad) {
+        load(true);
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
