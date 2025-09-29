@@ -26,4 +26,31 @@ function requireAuth(req, res, next) {
   }
 }
 
-module.exports = { requireAuth };
+/**
+ * Middleware: optionalAuth
+ * ------------------------
+ * - Like requireAuth, but allows requests without token
+ * - Used for extension read-only endpoints that validate via ext_user_id
+ * - If token present and valid, attaches req.user
+ * - If no token or invalid, continues without req.user
+ */
+function optionalAuth(req, res, next) {
+  const auth = req.headers.authorization || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+
+  if (!token) {
+    // No token provided - continue without authentication
+    return next();
+  }
+
+  try {
+    // Token provided - verify and attach user if valid
+    req.user = JWTService.verifyToken(token);
+    return next();
+  } catch {
+    // Invalid token - continue without authentication (don't block the request)
+    return next();
+  }
+}
+
+module.exports = { requireAuth, optionalAuth };

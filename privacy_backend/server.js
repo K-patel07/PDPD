@@ -18,7 +18,7 @@ const phishingRoutes = require("./phishing_detection/routes");
 
 /* ---------------------------- Middleware ---------------------------- */
 const { generalLimiter, authLimiter, otpLimiter } = require("./middleware/limits");
-const { requireAuth } = require("./middleware/jwt");
+const { requireAuth, optionalAuth } = require("./middleware/jwt");
 
 /* ----------------------------- Services ----------------------------- */
 const { initBlocklist } = require("./services/blocklist");
@@ -236,9 +236,9 @@ app.use("/api/classify", classifyRoutes);
 app.use("/api/auth", authRoutes);
 
 /* ------------------------- Route Protection -------------------------- */
-// Protect specific endpoints that need authentication
-app.use("/api/risk", requireAuth);
-app.use("/api/metrics", requireAuth);
+// Risk and Metrics: Use optional auth (works for extension without token, validates via ext_user_id)
+app.use("/api/risk", optionalAuth);
+app.use("/api/metrics", optionalAuth);
 app.use("/api/risk", riskRoutes);
 app.use("/api/metrics", metricsRoutes);
 
