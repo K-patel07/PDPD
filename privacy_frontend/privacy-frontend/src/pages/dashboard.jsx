@@ -83,8 +83,8 @@ export default function Dashboard() {
     if (stored && stored.trim()) {
       setExtUserId(stored.trim());
     } else {
-      // optional fallback for dev/demo
-      setExtUserId("ext-th4ah76hzej");
+      // Use the actual user ID from the logs
+      setExtUserId("f5ea28c1-6037-4340-a3dd-bfcbfde2e51d");
     }
   }, []);
 
