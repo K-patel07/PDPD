@@ -470,81 +470,80 @@ const submitSchema = Joi.object({
 
 router.post("/submit", async (req, res) => {
   try {
-    const p = await submitSchema.validateAsync(req.body || {}, { stripUnknown: true });
+    // 1) Validate
+    const { error, value } = submitSchema.validate(req.body || {}, { stripUnknown: true });
+    if (error) {
+      return res.status(400).json({ ok: false, error: error.details?.[0]?.message || "Invalid payload" });
+    }
 
-    // Get ext_user_id from request body or JWT token (fallback for extension compatibility)
-    let ext_user_id = safeStr(p.ext_user_id || p.extUserId, "");
-    
-    // Try to get from JWT token if available
+    // 2) Host normalization (accepts full URL)
+    const rawHost = value.hostname?.startsWith("http") ? value.hostname : `https://${value.hostname}`;
+    const hostname = normalizeHostname(rawHost);
+    if (!hostname) return res.status(400).json({ ok: false, error: "Invalid hostname" });
+
+    // Ignore trackers/blocked hosts
+    if (isBlocked(hostname)) return res.sendStatus(204);
+
+    // 3) ext_user_id (support Bearer fallback) — dev fallback allowed
+    let ext_user_id = safeStr(value.ext_user_id || value.extUserId, "");
     if (!ext_user_id) {
       const auth = safeStr(req.headers.authorization, "");
       const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
       if (token) {
         try {
           const payload = jwt.verify(token, process.env.JWT_SECRET || "dev-secret");
-          ext_user_id = safeStr(payload?.ext_user_id || payload?.sub, "");
-        } catch (e) {
-          console.warn("[submit] Invalid JWT token:", e.message);
-        }
+          if (payload?.userId) {
+            const { rows } = await db.query(
+              "SELECT ext_user_id FROM public.users WHERE id = $1 LIMIT 1;",
+              [payload.userId]
+            );
+            ext_user_id = safeStr(rows?.[0]?.ext_user_id, "");
+          }
+        } catch { /* ignore */ }
       }
     }
-    
-    // Use the same fallback user ID as visit API for consistency
-    if (!ext_user_id) ext_user_id = "f5ea28c1-6037-4340-a3dd-bfcbfde2e51d";
+    if (!ext_user_id) ext_user_id = "f5ea28c1-6037-4340-a3dd-bfcbfde2e51d"; // Use same fallback as visit API
 
-    // hostname normalized (accepts URL)
-    const rawHost = p.hostname?.startsWith("http") ? p.hostname : `https://${p.hostname}`;
-    const hostname = normalizeHostname(rawHost);
-    if (!hostname || isBlocked(hostname)) return res.sendStatus(204);
-
-    const user_id = await getOrCreateUserIdByExt(ext_user_id);
-    if (!user_id) {
-      console.error("[submit] Failed to create/find user for ext_user_id:", ext_user_id);
-      return res.status(500).json({ ok: false, error: "User creation failed" });
-    }
-    
+    await getOrCreateUserIdByExt(ext_user_id);
     const website_id = await getOrCreateWebsiteId(hostname);
-    if (!website_id) {
-      console.error("[submit] Failed to create/find website for hostname:", hostname);
-      return res.status(500).json({ ok: false, error: "Website creation failed" });
-    }
 
-    // unify flags
-    const src =
-      (p.fields_union && typeof p.fields_union === "object" && p.fields_union) ||
-      (p.fields_detected && typeof p.fields_detected === "object" && p.fields_detected) ||
-      {};
+    // 4) Category enrichment (best-effort)
+    let category = safeStr(value.category, "") || "Unknown";
+    let category_confidence = value.category_confidence ?? null;
+    let category_method = safeStr(value.category_method, null);
 
-    const submitted = {
-      submitted_name:    p.submitted_name    ?? !!src.name    ?? false,
-      submitted_email:   p.submitted_email   ?? !!src.email   ?? false,
-      submitted_phone:   p.submitted_phone   ?? !!src.phone   ?? false,
-      submitted_card:    p.submitted_card    ?? !!src.card    ?? false,
-      submitted_address: p.submitted_address ?? !!src.address ?? false,
-      submitted_age:     p.submitted_age     ?? !!src.age     ?? false,
-      submitted_gender:  p.submitted_gender  ?? !!src.gender  ?? false,
-      submitted_country: p.submitted_country ?? !!src.country ?? false,
-    };
-
-    // if nothing of interest, no-op
-    if (!Object.values(submitted).some(Boolean)) return res.sendStatus(204);
-
-    // category enrichment (best-effort)
-    let category = safeStr(p.category, "") || "Unknown";
-    let category_confidence = p.category_confidence ?? null;
-    let category_method = safeStr(p.category_method, null);
     if (category.toLowerCase() === "unknown") {
       try {
         const det = await detectCategoryForVisit({
           hostname,
-          path: safeStr(p.path, ""),
-          title: safeStr(p.title, ""),
+          path: safeStr(value.path, ""),
+          title: safeStr(value.title, ""),
         });
         category = det?.category || "Unknown";
         category_confidence = det?.confidence ?? null;
         category_method = det?.method ?? null;
       } catch {}
     }
+
+    // unify flags
+    const src =
+      (value.fields_union && typeof value.fields_union === "object" && value.fields_union) ||
+      (value.fields_detected && typeof value.fields_detected === "object" && value.fields_detected) ||
+      {};
+
+    const submitted = {
+      submitted_name:    value.submitted_name    ?? !!src.name    ?? false,
+      submitted_email:   value.submitted_email   ?? !!src.email   ?? false,
+      submitted_phone:   value.submitted_phone   ?? !!src.phone   ?? false,
+      submitted_card:    value.submitted_card    ?? !!src.card    ?? false,
+      submitted_address: value.submitted_address ?? !!src.address ?? false,
+      submitted_age:     value.submitted_age     ?? !!src.age     ?? false,
+      submitted_gender:  value.submitted_gender  ?? !!src.gender  ?? false,
+      submitted_country: value.submitted_country ?? !!src.country ?? false,
+    };
+
+    // if nothing of interest, no-op
+    if (!Object.values(submitted).some(Boolean)) return res.sendStatus(204);
 
     // basic site_visit linkage (optional, best effort)
     const sv = await db.query(
@@ -568,18 +567,18 @@ router.post("/submit", async (req, res) => {
     }
     if (colsSet.has("last_input_time")) {
       cols.push("last_input_time");
-      vals.push(p.last_input_time ? new Date(p.last_input_time).toISOString() : null);
+      vals.push(value.last_input_time ? new Date(value.last_input_time).toISOString() : null);
     }
     if (colsSet.has("screen_time_seconds")) {
       cols.push("screen_time_seconds");
-      vals.push(Number(p.screen_time_seconds) || 0);
+      vals.push(Number(value.screen_time_seconds) || 0);
     }
-    if (colsSet.has("path")) { cols.push("path"); vals.push(safeStr(p.path, "")); }
-    if (colsSet.has("title")) { cols.push("title"); vals.push(safeStr(p.title, "")); }
+    if (colsSet.has("path")) { cols.push("path"); vals.push(safeStr(value.path, "")); }
+    if (colsSet.has("title")) { cols.push("title"); vals.push(safeStr(value.title, "")); }
     if (colsSet.has("category")) { cols.push("category"); vals.push(category); }
     if (colsSet.has("category_confidence")) { cols.push("category_confidence"); vals.push(category_confidence); }
     if (colsSet.has("category_method")) { cols.push("category_method"); vals.push(category_method); }
-    if (colsSet.has("event_type")) { cols.push("event_type"); vals.push(safeStr(p.event_type, "submit")); }
+    if (colsSet.has("event_type")) { cols.push("event_type"); vals.push(safeStr(value.event_type, "submit")); }
 
     const placeholders = vals.map((_, i) => `$${i + 1}`).join(",");
     const sql = `INSERT INTO public.field_submissions (${cols.join(",")}) VALUES (${placeholders});`;
