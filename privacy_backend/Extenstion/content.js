@@ -61,29 +61,40 @@
     const flags = Object.fromEntries(KEYS.map(k => [k, false]));
     if (!form) return flags;
 
-    // name - detect if field exists (not just if it has value)
-    flags.name = !!form.querySelector('input[name*="name" i], input[id*="name" i], input[placeholder*="name" i]');
+    // name - only if field has value
+    const nameField = form.querySelector('input[name*="name" i], input[id*="name" i], input[placeholder*="name" i]');
+    flags.name = !!(nameField?.value?.trim());
 
-    // email - detect if field exists (not just if it has value)
-    flags.email = !!form.querySelector('input[type="email"], input[name*="email" i], input[placeholder*="email" i]');
+    // email - only if field has value with @
+    const emailFields = form.querySelectorAll('input[type="email"], input[name*="email" i], input[placeholder*="email" i]');
+    flags.email = [...emailFields].some(i => (i.value || "").includes("@"));
 
-    // phone - detect if field exists (not just if it has value)
-    flags.phone = !!form.querySelector('input[type="tel"], input[name*="phone" i], input[name*="mobile" i], input[placeholder*="phone" i]');
+    // phone - only if field has value with 6+ digits
+    const phoneFields = form.querySelectorAll('input[type="tel"], input[name*="phone" i], input[name*="mobile" i], input[placeholder*="phone" i]');
+    flags.phone = [...phoneFields].some(i => /\d{6,}/.test((i.value || "").replace(/\D/g, "")));
 
-    // card (credit/debit) - detect if field exists (not just if it has value)
-    flags.card = !!form.querySelector('input[name*="card" i], input[autocomplete="cc-number"], input[placeholder*="card" i]');
+    // card - only if field has value with 12-19 digits
+    const cardFields = form.querySelectorAll('input[name*="card" i], input[autocomplete="cc-number"], input[placeholder*="card" i]');
+    flags.card = [...cardFields].some(i => /\d{12,19}/.test((i.value || "").replace(/\D/g, "")));
 
-    // address - detect if field exists (not just if it has value)
-    flags.address = !!form.querySelector('input[name*="address" i], textarea[name*="address" i], input[placeholder*="address" i]');
+    // address - only if field has value with 5+ characters
+    const addressFields = form.querySelectorAll('input[name*="address" i], textarea[name*="address" i], input[placeholder*="address" i]');
+    flags.address = [...addressFields].some(i => (i.value || "").trim().length > 5);
 
-    // age / DOB - detect if field exists (not just if it has value)
-    flags.age = !!form.querySelector('input[name*="age" i], input[name*="dob" i], input[type="date"], input[placeholder*="age" i]');
+    // age - only if field has value
+    const ageFields = form.querySelectorAll('input[name*="age" i], input[name*="dob" i], input[type="date"], input[placeholder*="age" i]');
+    flags.age = [...ageFields].some(i => (i.value || "").trim() !== "");
 
-    // gender - detect if field exists (not just if it has value)
-    flags.gender = !!form.querySelector('[name*="gender" i], select[name*="gender" i]');
+    // gender - only if field has value
+    const genderFields = form.querySelectorAll('[name*="gender" i], select[name*="gender" i]');
+    flags.gender = [...genderFields].some(el =>
+      (el.matches('input[type="radio"],input[type="checkbox"]') && el.checked) ||
+      (el.matches('select') && (el.value || "").trim() !== "")
+    );
 
-    // country - detect if field exists (not just if it has value)
-    flags.country = !!form.querySelector('select[name*="country" i], input[name*="country" i], input[placeholder*="country" i]');
+    // country - only if field has value
+    const countryFields = form.querySelectorAll('select[name*="country" i], input[name*="country" i], input[placeholder*="country" i]');
+    flags.country = [...countryFields].some(el => (el.value || "").trim() !== "");
 
     return flags;
   }
@@ -131,8 +142,10 @@
       form: form ? "found" : "not found"
     });
     
-    // Always send form submission if form exists, even if no fields detected
-    // This ensures we track all form interactions
+    if (!anyTrue) {
+      console.log("[content] No form fields with values detected, skipping submission");
+      return; // only if at least one flag is true
+    }
 
     const submitted = toSubmittedFlags(flags);
     const payload = {
