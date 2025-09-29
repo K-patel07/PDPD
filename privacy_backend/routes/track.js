@@ -642,7 +642,7 @@ router.post("/submit", async (req, res) => {
         
         // log helpful info once
         const trueKeys = Object.entries(submitted).filter(([, v]) => v).map(([k]) => k).join(", ");
-        console.log(`[submit] saved: ${hostname} user:${ext_user_id} flags{ ${trueKeys} } risk:${risk?.risk_score || 0}% (phishing:${(phishingRisk*100).toFixed(1)}% data:${(risk?.data_risk || 0)*100).toFixed(1)}%)`);
+        console.log(`[submit] saved: ${hostname} user:${ext_user_id} flags{ ${trueKeys} } risk:${risk?.risk_score || 0}% (phishing:${(phishingRisk*100).toFixed(1)}% data:${((risk?.data_risk || 0)*100).toFixed(1)}%)`);
       } catch (e) {
         console.warn("[submit] risk update failed:", e?.message || e);
       }
