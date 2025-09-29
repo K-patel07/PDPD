@@ -191,8 +191,12 @@ export default function Category() {
       }
       
       // Check if we already have fields data from the combined endpoint
-      if (selectedRow?.fieldsDetected) {
-        const fd = selectedRow.fieldsDetected;
+      // Only use it if it has actual field data (not just an empty object)
+      const fd = selectedRow?.fieldsDetected;
+      const hasFieldData = fd && Object.keys(fd).length > 0 && Object.values(fd).some(v => v === true);
+      
+      if (hasFieldData) {
+        console.log("[Category] Using cached fields from category insights:", fd);
         setProvided({
           name: !!fd.name,
           address: !!fd.address,
@@ -207,6 +211,7 @@ export default function Category() {
       }
       
       // Fallback: fetch separately if not in combined data
+      console.log("[Category] Fetching provided data separately for:", selectedHostname);
       try {
         const detail = await fetchProvidedDataForSite({
           extUserId,
