@@ -559,6 +559,12 @@ router.post("/submit", async (req, res) => {
     const cols = ["hostname", "website_id", "site_visit_id", "ext_user_id"];
     const vals = [hostname, website_id, site_visit_id, ext_user_id];
 
+    // Add fields_detected JSONB column
+    if (colsSet.has("fields_detected")) {
+      cols.push("fields_detected");
+      vals.push(JSON.stringify(src)); // src contains the boolean flags from extension
+    }
+
     for (const c of SUBMITTED_COLS) {
       if (colsSet.has(c)) {
         cols.push(c);
