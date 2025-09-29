@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import infoIcon from "../assets/info.svg";
 import "../styles/HelpModal.css";
 
 export default function HelpModal() {
@@ -22,7 +23,7 @@ export default function HelpModal() {
         aria-label="Help"
         title="Help"
       >
-        <img src="/src/assets/info.svg" alt="Help" width="20" height="20" />
+        <img src={infoIcon} alt="Help" width="20" height="20" />
       </button>
 
       {isOpen && (

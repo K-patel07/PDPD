@@ -222,7 +222,7 @@ export default function Category() {
             <label className="search hover-lift">
               <input
                 type="text"
-                placeholder="Search here"
+                placeholder=""
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && onSearch(e)}

@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import emptyLookImage from "../assets/empty-look.png";
 import "../styles/EmptyState.css";
 
 export default function EmptyState({ categoryName }) {
@@ -9,7 +10,7 @@ export default function EmptyState({ categoryName }) {
         {/* Image */}
         <div className="empty-state-image">
           <img 
-            src="/src/assets/empty-look.png" 
+            src={emptyLookImage} 
             alt="No websites found" 
             className="empty-illustration"
           />
